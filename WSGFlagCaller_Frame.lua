@@ -55,6 +55,8 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     hpBar:SetStatusBarColor(0, 1, 0)
     hpBar:SetMinMaxValues(0, 100)
     hpBar:SetValue(100)
+    row.hpBar = hpBar
+    
     local distText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     distText:SetPoint("RIGHT", hpBar, "LEFT", -5, 0)
     distText:SetText("--")
