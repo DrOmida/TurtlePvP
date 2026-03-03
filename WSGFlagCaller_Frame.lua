@@ -224,7 +224,8 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     -- SuperWoW Minimap Tracking 
     if WSGFCConfig.minimap and WFC.superwow and TrackUnit then
         local myFaction = UnitFactionGroup("player")
-        local isAllyFC = (myFaction == "Alliance" and carrierName == WFC.allyCarrier) or (myFaction == "Horde" and carrierName == WFC.hordeCarrier)
+        -- If I am Alliance, my ally carries the Horde flag (WFC.hordeCarrier)
+        local isAllyFC = (myFaction == "Alliance" and carrierName == WFC.hordeCarrier) or (myFaction == "Horde" and carrierName == WFC.allyCarrier)
         if isAllyFC and targetId then
             TrackUnit(targetId)
         end
@@ -247,18 +248,19 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
         end
         
         local myFaction = UnitFactionGroup("player")
-        local isAllyFC = (myFaction == "Alliance" and carrierName == WFC.allyCarrier) or (myFaction == "Horde" and carrierName == WFC.hordeCarrier)
+        local isEnemyFC = (myFaction == "Alliance" and carrierName == WFC.allyCarrier) or (myFaction == "Horde" and carrierName == WFC.hordeCarrier)
         
-        if not isAllyFC then
-            if hp <= 0 or (UnitIsDead and UnitIsDead(targetId)) then
-                -- They died! Force clear out the state.
-                if myFaction == "Horde" then
-                    WFC.allyCarrier = nil
-                else
-                    WFC.hordeCarrier = nil
-                end
-                WFC.Frame:UpdateVisibility()
-            else
+        if hp <= 0 or (UnitIsDead and UnitIsDead(targetId)) then
+            -- They died! Force clear out the state based on who they were.
+            if carrierName == WFC.allyCarrier then
+                WFC.allyCarrier = nil
+            end
+            if carrierName == WFC.hordeCarrier then
+                WFC.hordeCarrier = nil
+            end
+            WFC.Frame:UpdateVisibility()
+        else
+            if isEnemyFC then
                 if WFC.Combat and WFC.Combat.CheckHP then
                     WFC.Combat:CheckHP(carrierName, hp, hpMax, targetId)
                 end

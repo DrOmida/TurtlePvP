@@ -37,8 +37,10 @@ function WFC.Combat:CheckHP(carrierName, hp, maxHp, unitId)
     
     local myFaction = UnitFactionGroup("player")
     -- Only call out ENEMY FC
-    if myFaction == "Alliance" and carrierName == WFC.allyCarrier then return end
-    if myFaction == "Horde" and carrierName == WFC.hordeCarrier then return end
+    -- If I am Alliance, my team's carrier holds the Horde flag (WFC.hordeCarrier)
+    -- If I am Horde, my team's carrier holds the Alliance flag (WFC.allyCarrier)
+    if myFaction == "Alliance" and carrierName == WFC.hordeCarrier then return end
+    if myFaction == "Horde" and carrierName == WFC.allyCarrier then return end
 
     local pct = (hp / maxHp) * 100
     local now = GetTime()
