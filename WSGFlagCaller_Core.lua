@@ -1,8 +1,4 @@
 WSGFCConfig = WSGFCConfig or {
-    flagPickup = true,
-    flagDrop = true,
-    flagCapture = true,
-    flagReturn = true,
     hpCallouts = true,
     hpThresholds = {75, 50, 25},
     showFrame = true,
@@ -92,10 +88,6 @@ end
 
 frame:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
-        if WSGFCConfig.flagPickup == nil then WSGFCConfig.flagPickup = true end
-        if WSGFCConfig.flagDrop == nil then WSGFCConfig.flagDrop = true end
-        if WSGFCConfig.flagCapture == nil then WSGFCConfig.flagCapture = true end
-        if WSGFCConfig.flagReturn == nil then WSGFCConfig.flagReturn = true end
         if WSGFCConfig.hpCallouts == nil then WSGFCConfig.hpCallouts = true end
         if not WSGFCConfig.hpThresholds then WSGFCConfig.hpThresholds = {75, 50, 25} end
         if WSGFCConfig.showFrame == nil then WSGFCConfig.showFrame = true end
@@ -122,9 +114,6 @@ function WFC:ProcessBGMessage(msg)
     local _, _, pickerAlliance = string.find(msg, "([^%s]+) has taken the Alliance Flag!")
     if pickerAlliance then
         WFC.allyCarrier = pickerAlliance
-        if WSGFCConfig.flagPickup then
-            WFC:Announce(pickerAlliance .. " has taken the Alliance Flag!")
-        end
         WFC.Combat:ResetPhases(pickerAlliance)
         WFC.Frame:UpdateVisibility()
         return
@@ -133,9 +122,6 @@ function WFC:ProcessBGMessage(msg)
     local _, _, pickerHorde = string.find(msg, "([^%s]+) has taken the Horde Flag!")
     if pickerHorde then
         WFC.hordeCarrier = pickerHorde
-        if WSGFCConfig.flagPickup then
-            WFC:Announce(pickerHorde .. " has taken the Horde Flag!")
-        end
         WFC.Combat:ResetPhases(pickerHorde)
         WFC.Frame:UpdateVisibility()
         return

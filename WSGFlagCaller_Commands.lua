@@ -11,10 +11,6 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
     
     if cmd == "info" or not cmd then
         WFC:Print("WSGFlagCaller Commands:")
-        WFC:Print("/wfc flag pickup on|off")
-        WFC:Print("/wfc flag drop on|off")
-        WFC:Print("/wfc flag capture on|off")
-        WFC:Print("/wfc flag return on|off")
         WFC:Print("/wfc hp on|off")
         WFC:Print("/wfc thresholds 75 50 25")
         WFC:Print("/wfc frame on|off")
@@ -23,17 +19,6 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
         WFC:Print("/wfc force")
         WFC:Print("/wfc reset")
         WFC:Print("/wfc status")
-    elseif cmd == "flag" then
-        if args[2] == "pickup" then
-            WSGFCConfig.flagPickup = (args[3] == "on")
-        elseif args[2] == "drop" then
-            WSGFCConfig.flagDrop = (args[3] == "on")
-        elseif args[2] == "capture" then
-            WSGFCConfig.flagCapture = (args[3] == "on")
-        elseif args[2] == "return" then
-            WSGFCConfig.flagReturn = (args[3] == "on")
-        end
-        WFC:Print("Flag " .. tostring(args[2]) .. " set to " .. tostring(args[3]))
     elseif cmd == "hp" then
         WSGFCConfig.hpCallouts = (args[2] == "on")
         WFC:Print("HP Callouts set to " .. tostring(args[2]))
@@ -65,7 +50,6 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
         end
         WFC:Print("HP Thresholds updated.")
     elseif cmd == "status" then
-        WFC:Print("Flags: pickup="..tostring(WSGFCConfig.flagPickup).." drop="..tostring(WSGFCConfig.flagDrop).." capture="..tostring(WSGFCConfig.flagCapture).." return="..tostring(WSGFCConfig.flagReturn))
         WFC:Print("HP Callouts="..tostring(WSGFCConfig.hpCallouts).." Frame="..tostring(WSGFCConfig.showFrame).." Debug="..tostring(WSGFCConfig.debug))
     end
 end
