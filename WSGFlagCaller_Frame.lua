@@ -245,8 +245,24 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
         else
             row.hpBar:SetStatusBarColor(1, 0, 0)
         end
-        if WFC.Combat and WFC.Combat.CheckHP then
-            WFC.Combat:CheckHP(carrierName, hp, hpMax, targetId)
+        
+        local myFaction = UnitFactionGroup("player")
+        local isAllyFC = (myFaction == "Alliance" and carrierName == WFC.allyCarrier) or (myFaction == "Horde" and carrierName == WFC.hordeCarrier)
+        
+        if not isAllyFC then
+            if hp <= 0 or (UnitIsDead and UnitIsDead(targetId)) then
+                -- They died! Force clear out the state.
+                if myFaction == "Horde" then
+                    WFC.allyCarrier = nil
+                else
+                    WFC.hordeCarrier = nil
+                end
+                WFC.Frame:UpdateVisibility()
+            else
+                if WFC.Combat and WFC.Combat.CheckHP then
+                    WFC.Combat:CheckHP(carrierName, hp, hpMax, targetId)
+                end
+            end
         end
     end
 end
