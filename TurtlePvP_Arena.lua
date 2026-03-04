@@ -1,5 +1,6 @@
 WFC.Arena = {
     enemies = {},       -- name -> { guid, hp, hpMax, lastTrinketTime, trinketSpell }
+    orderedNames = {},
     enabled = false
 }
 
@@ -36,17 +37,25 @@ unlockBg:SetHeight(20)
 unlockBg:SetTexture(0, 1, 0, 0.2)
 hud.unlockBg = unlockBg
 
-local title = hud:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-title:SetPoint("TOP", hud, "TOP", 0, -8)
+-- Create a dedicated drag handle for the title area - This keeps the original frame C++ mechanics 100% stable
+local dragHandle = CreateFrame("Button", nil, hud)
+dragHandle:SetPoint("TOPLEFT", hud, "TOPLEFT", 0, 0)
+dragHandle:SetPoint("TOPRIGHT", hud, "TOPRIGHT", 0, 0)
+dragHandle:SetHeight(24)
+dragHandle:RegisterForDrag("LeftButton")
+dragHandle:RegisterForClicks("RightButtonUp")
+
+local title = dragHandle:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+title:SetPoint("CENTER", dragHandle, "CENTER", 0, 0)
 title:SetText("|cffffd700Arena Enemies|r")
 
-hud:RegisterForDrag("LeftButton")
-hud:SetScript("OnDragStart", function() 
+dragHandle:SetScript("OnDragStart", function() 
     if not TurtlePvPConfig.arenaLocked then 
         hud:StartMoving() 
     end 
 end)
-hud:SetScript("OnDragStop", function()
+
+dragHandle:SetScript("OnDragStop", function()
     hud:StopMovingOrSizing()
     local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
     TurtlePvPConfig.arenaFramePoint = point
@@ -62,25 +71,25 @@ local function UpdateArenaLock()
     end
 end
 
-local function HandleClick(button)
-    if button == "RightButton" then
+dragHandle:SetScript("OnClick", function()
+    if arg1 == "RightButton" then
         TurtlePvPConfig.arenaLocked = not TurtlePvPConfig.arenaLocked
         UpdateArenaLock()
         if TurtlePvPConfig.arenaLocked then
             WFC:Print("Arena HUD Locked.")
         else
-            WFC:Print("Arena HUD Unlocked. You can now drag the HUD.")
+            WFC:Print("Arena HUD Unlocked. You can now drag the title bar.")
         end
     end
-end
+end)
+
 
 for i=1, MAX_ENEMIES do
     local row = CreateFrame("Button", nil, hud)
     row:SetWidth(190)
     row:SetHeight(20)
     row:SetPoint("TOPLEFT", hud, "TOPLEFT", 5, -24 - ((i-1)*22))
-    row:RegisterForDrag("LeftButton")
-    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    row:RegisterForClicks("LeftButtonUp")
     
     local tex = row:CreateTexture(nil, "BACKGROUND")
     tex:SetAllPoints()
@@ -118,24 +127,9 @@ for i=1, MAX_ENEMIES do
     trinketIcon:SetPoint("LEFT", nameText, "RIGHT", 4, 0)
     row.trinketIcon = trinketIcon
     
-    row:SetScript("OnDragStart", function() 
-        if not TurtlePvPConfig.arenaLocked then 
-            hud:StartMoving() 
-        end 
-    end)
-    row:SetScript("OnDragStop", function()
-        hud:StopMovingOrSizing()
-        local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
-        TurtlePvPConfig.arenaFramePoint = point
-        TurtlePvPConfig.arenaFrameX = xOfs
-        TurtlePvPConfig.arenaFrameY = yOfs
-    end)
-    
     row:SetScript("OnClick", function()
         if arg1 == "LeftButton" then
             if row.targetName then TargetByName(row.targetName, true) end
-        else
-            HandleClick(arg1)
         end
     end)
     
@@ -188,6 +182,7 @@ end
 
 function WFC.Arena:Reset()
     WFC.Arena.enemies = {}
+    WFC.Arena.orderedNames = {}
     for i=1, MAX_ENEMIES do
         hud.rows[i]:Hide()
     end
@@ -198,6 +193,8 @@ function WFC.Arena:CleanName(name)
     if not name then return nil end
     local clean = string.gsub(name, "|c%x%x%x%x%x%x%x%x", "")
     clean = string.gsub(clean, "|r", "")
+    -- Extreme strict regex: Only keep Alphabet letters
+    clean = string.gsub(clean, "[^%a]", "")
     return clean
 end
 
@@ -207,6 +204,14 @@ function WFC.Arena:AddEnemy(guid, rawName)
     
     if not WFC.Arena.enemies[name] then
         WFC.Arena.enemies[name] = { guid = guid, lastTrinketTime = 0 }
+        
+        local found = false
+        for _, n in ipairs(WFC.Arena.orderedNames) do
+            if n == name then found = true; break; end
+        end
+        if not found then
+            table.insert(WFC.Arena.orderedNames, name)
+        end
     else
         WFC.Arena.enemies[name].guid = guid
     end
@@ -236,6 +241,14 @@ frame:SetScript("OnEvent", function(...)
             deadName = WFC.Arena:CleanName(deadName)
             if deadName and WFC.Arena.enemies[deadName] then
                 WFC.Arena.enemies[deadName] = nil
+                
+                for i, n in ipairs(WFC.Arena.orderedNames) do
+                    if n == deadName then
+                        table.remove(WFC.Arena.orderedNames, i)
+                        break
+                    end
+                end
+                
                 WFC.Arena:UpdateHUD()
             end
         end
@@ -274,30 +287,27 @@ function WFC.Arena:UpdateHUD()
         hud:Show()
     end
 
-    local rowIdx = 1
-    local cleanNames = {}
-    for n, _ in pairs(WFC.Arena.enemies) do
-        table.insert(cleanNames, n)
+    for name, eData in pairs(WFC.Arena.enemies) do
+        if TurtlePvPConfig.arenaTrinkets and WFC.Arena:CleanName(UnitName("target")) == name then
+            for i = 1, 32 do
+                local tex = UnitBuff("target", i)
+                if not tex then break end
+                if string.find(string.lower(tex), "inv_jewelry_trinketpvp") then
+                    eData.lastTrinketTime = GetTime()
+                    eData.trinketSpell = tex
+                end
+            end
+        end
     end
-    table.sort(cleanNames)
 
-    for _, name in ipairs(cleanNames) do
+    local rowIdx = 1
+    for _, name in ipairs(WFC.Arena.orderedNames) do
         if rowIdx > MAX_ENEMIES then break end
         local eData = WFC.Arena.enemies[name]
+        
         if eData then
             local row = hud.rows[rowIdx]
             row.targetName = name
-            
-            if TurtlePvPConfig.arenaTrinkets and WFC.Arena:CleanName(UnitName("target")) == name then
-                for i = 1, 32 do
-                    local tex, _ = UnitBuff("target", i)
-                    if not tex then break end
-                    if string.find(string.lower(tex), "inv_jewelry_trinketpvp") then
-                        eData.lastTrinketTime = GetTime()
-                        eData.trinketSpell = tex
-                    end
-                end
-            end
             
             local hp, hpMax = 0, 100
             
