@@ -1,5 +1,5 @@
 --[[
-WSGFlagCaller_Minimap.lua
+TurtlePvP_Minimap.lua
 Minimap button + tabbed settings panel for TurtlePvP
 Styled after TurtleHonorSpyEnhanced overlay.lua (dark tooltip backdrop, gold title)
 --]]
@@ -62,24 +62,24 @@ local menuItems = {
     { text = GOLD.."TurtlePvP|r",                notCheckable = 1, isTitle = 1 },
     { text = "Toggle WSG Caller",     notCheckable = 1,
         func = function()
-            WSGFCConfig.wsgEnabled = not WSGFCConfig.wsgEnabled
+            TurtlePvPConfig.wsgEnabled = not TurtlePvPConfig.wsgEnabled
             WFC:CheckZone(true)
-            WFC:Print("WSG Caller " .. (WSGFCConfig.wsgEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+            WFC:Print("WSG Caller " .. (TurtlePvPConfig.wsgEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
         end },
     { text = "Toggle Arena HUD",      notCheckable = 1,
         func = function()
-            WSGFCConfig.arenaEnabled = not WSGFCConfig.arenaEnabled
+            TurtlePvPConfig.arenaEnabled = not TurtlePvPConfig.arenaEnabled
             WFC:CheckZone(true)
-            WFC:Print("Arena HUD " .. (WSGFCConfig.arenaEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+            WFC:Print("Arena HUD " .. (TurtlePvPConfig.arenaEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
         end },
     { text = "Reset Frame Positions", notCheckable = 1,
         func = function()
-            WSGFCConfig.framePoint = "TOP"
-            WSGFCConfig.frameX = 0
-            WSGFCConfig.frameY = -150
-            WSGFCConfig.arenaFramePoint = "CENTER"
-            WSGFCConfig.arenaFrameX = 0
-            WSGFCConfig.arenaFrameY = 0
+            TurtlePvPConfig.framePoint = "TOP"
+            TurtlePvPConfig.frameX = 0
+            TurtlePvPConfig.frameY = -150
+            TurtlePvPConfig.arenaFramePoint = "CENTER"
+            TurtlePvPConfig.arenaFrameX = 0
+            TurtlePvPConfig.arenaFrameY = 0
             WFC:Print("Frame positions reset.")
         end },
     { text = "Open Settings",         notCheckable = 1,
@@ -91,7 +91,7 @@ local function ShowContextMenu()
     if not menuInitialized then
         UIDropDownMenu_Initialize(contextMenu, function()
             for _, item in ipairs(menuItems) do
-                local info = UIDropDownMenu_CreateInfo()
+                local info = {}
                 info.text = item.text
                 info.notCheckable = item.notCheckable
                 info.isTitle = item.isTitle
@@ -115,7 +115,8 @@ end)
 
 -- Draggable position around minimap
 local function UpdateMinimapPos()
-    local angle = math.rad(WSGFCConfig.minimapPos or 45)
+    local pos = (TurtlePvPConfig and TurtlePvPConfig.minimapPos) or 45
+    local angle = math.rad(pos)
     local r = 80
     mmButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle)*r, math.sin(angle)*r)
 end
@@ -132,8 +133,10 @@ dragF:SetScript("OnUpdate", function()
     local mx, my = Minimap:GetCenter()
     local px, py = GetCursorPosition()
     local s = UIParent:GetEffectiveScale()
+    if not s or s == 0 then s = 1 end
     px, py = px/s, py/s
-    WSGFCConfig.minimapPos = math.deg(math.atan2(py - my, px - mx))
+    if not TurtlePvPConfig then TurtlePvPConfig = {} end
+    TurtlePvPConfig.minimapPos = math.deg(math.atan2(py - my, px - mx))
     UpdateMinimapPos()
 end)
 
@@ -273,16 +276,16 @@ wsgPage:SetPoint("BOTTOMRIGHT", -8, 8)
 table.insert(tabPages, wsgPage)
 
 local chkWSG = MakeCheck(wsgPage, "Enable WSG Flag Caller", 8, -8, function()
-    WSGFCConfig.wsgEnabled = this:GetChecked()
+    TurtlePvPConfig.wsgEnabled = this:GetChecked()
     WFC:CheckZone(true)
 end)
 
 local chkHP = MakeCheck(wsgPage, "Enemy HP Callouts in /bg", 24, -36, function()
-    WSGFCConfig.hpCallouts = this:GetChecked()
+    TurtlePvPConfig.hpCallouts = this:GetChecked()
 end)
 
 local chkFrame = MakeCheck(wsgPage, "Show Flag Carrier HUD", 24, -60, function()
-    WSGFCConfig.showFrame = this:GetChecked()
+    TurtlePvPConfig.showFrame = this:GetChecked()
     if WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
 end)
 
@@ -299,16 +302,16 @@ arenaPage:SetPoint("BOTTOMRIGHT", -8, 8)
 table.insert(tabPages, arenaPage)
 
 local chkArena = MakeCheck(arenaPage, "Enable Arena Enemy HUD", 8, -8, function()
-    WSGFCConfig.arenaEnabled = this:GetChecked()
+    TurtlePvPConfig.arenaEnabled = this:GetChecked()
     WFC:CheckZone(true)
 end)
 
 local chkDist = MakeCheck(arenaPage, "Show Distance  (requires UnitXP)", 24, -36, function()
-    WSGFCConfig.arenaDistance = this:GetChecked()
+    TurtlePvPConfig.arenaDistance = this:GetChecked()
 end)
 
 local chkTrinkets = MakeCheck(arenaPage, "Track Trinkets / Racials  (requires Nampower)", 24, -60, function()
-    WSGFCConfig.arenaTrinkets = this:GetChecked()
+    TurtlePvPConfig.arenaTrinkets = this:GetChecked()
 end)
 
 local arenaNote = arenaPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
@@ -316,7 +319,7 @@ arenaNote:SetPoint("TOPLEFT", 24, -88)
 arenaNote:SetText("|cff888888Auto-activates in TurtleWoW arena zones.\nUse /tpvp force arena to test.|r")
 
 -- ========================
--- TAB 3: EFC Report (placeholder — populated by WSGFlagCaller_EFCReport.lua)
+-- TAB 3: EFC Report (placeholder — populated by TurtlePvP_EFCReport.lua)
 -- ========================
 local efcPage = CreateFrame("Frame", nil, panel)
 efcPage:SetPoint("TOPLEFT", 8, -56)
@@ -344,12 +347,12 @@ WFC.Minimap.efcPage = efcPage  -- let EFCReport module inject more controls here
 -- Sync checkboxes on open
 -- ========================
 panel:SetScript("OnShow", function()
-    chkWSG:SetChecked(WSGFCConfig.wsgEnabled)
-    chkHP:SetChecked(WSGFCConfig.hpCallouts)
-    chkFrame:SetChecked(WSGFCConfig.showFrame)
-    chkArena:SetChecked(WSGFCConfig.arenaEnabled)
-    chkDist:SetChecked(WSGFCConfig.arenaDistance)
-    chkTrinkets:SetChecked(WSGFCConfig.arenaTrinkets)
+    chkWSG:SetChecked(TurtlePvPConfig.wsgEnabled)
+    chkHP:SetChecked(TurtlePvPConfig.hpCallouts)
+    chkFrame:SetChecked(TurtlePvPConfig.showFrame)
+    chkArena:SetChecked(TurtlePvPConfig.arenaEnabled)
+    chkDist:SetChecked(TurtlePvPConfig.arenaDistance)
+    chkTrinkets:SetChecked(TurtlePvPConfig.arenaTrinkets)
     SelectTab(1)
 end)
 

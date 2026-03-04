@@ -3,29 +3,48 @@
 A WoW 1.12 / Turtle WoW addon perfectly designed for Warsong Gulch. It tracks flag carriers, features a clean click-to-focus HUD, calculates precise 3D distance to the carriers, and calls out Enemy Flag Carrier health milestones in standard Battleground chat. Complete with smart anti-spam healing hysteresis.
 
 ## Requirements
+# TurtlePvP
 
-The addon functions completely standalone, however, installing the following two optional mods unlocks the full potential of WSGFlagCaller v2:
-
-| Mod | Why it's amazing in WSGFlagCaller | Where to get it |
-|---|---|---|
-| **Nampower** | Unlocks GUID-tracking. The addon will instantly know if the flag carrier dies without needing you to have them targeted. Enables reading exact HP from anywhere in the Battleground securely. | [Download Nampower v3+](https://gitea.com/avitasia/nampower/releases) |
-| **UnitXP** | Unlocks precise 3D distance rendering. Shows the exact yard distance to the flag carriers dynamically on the HUD. | Turtle WoW Discord / Mods |
-| Spy | **Not Required**. WSGFlagCaller has its own lightweight internal GUID engine. | - |
+A versatile PvP utility suite tailored for Turtle WoW, providing an intelligent HUD, passive enemy tracking, and rapid tactical reporting across Warsong Gulch and Custom Arenas.
 
 ## Features
 
-- **Standalone Tracker Engine:** The addon actively harvests `target`, `mouseover`, and Nampower event GUIDs into a tiny, zero-overhead memory footprint to track exactly who is holding the flag without relying on the clunky vanilla `UnitExists("name")` hack.
-- **HUD Frame with Distance:** A movable transparent box lets you precisely track both friendly and enemy flag carriers. If UnitXP is installed, the exact distance in yards to the carrier will continually update in red/yellow/white depending on proximity.
-- **Server-Authoritative Death Engine:** If Nampower is installed, the addon listens directly to the server's `UNIT_DIED` packet to instantly override and reset the HUD to "Nobody". It purposefully ignores `UnitIsDead` which is notoriously broken by Feign Death. 
-- **Health Phase Callouts:** When the Enemy Carrier falls to 75%, 50%, or 25% HP, an alert is automatically sent safely to your team.
-- **Anti-Spam & Hysteresis:** Callouts lock themselves to prevent spam. If the FC is being repeatedly healed through the 50% border, the callout won't endlessly reactivate unless they are solidly healed back up 10% higher than the threshold.
+- **Warsong Gulch Flag Tracker:**
+  - Live HUD displaying the HP and Distance to both Flag Carriers.
+  - Automatic `/bg` callouts when the enemy FC's health hits 75, 50, and 25%.
+  - Zero-config auto-recovery via passive buffs — picks up missed carriers automatically.
+- **Arena Enemy Tracker HUD:**
+  - Automatically activates in Turtle WoW's custom arena zones (The Blood Arena, Lordaeron Arena, Sunstrider Court, The Blood Ring).
+  - Passively harvests enemy data from targets, mouseovers, nameplates, and combat logs.
+  - HUD displays up to 8 enemies simultaneously with Name, HP bar, estimated absolute distance, and class colors.
+  - Warns you immediately with `[🔔]` when an enemy uses a PvP Trinket, Racial (WotF/Escape Artist/Stoneform), or Perception.
+- **EFC Location Reporter:**
+  - A dedicated grid of 23 location buttons tailored to Warsong Gulch.
+  - Click a location button to instantly announce the enemy flag carrier's position in Battleground chat (automatically using Common/Orcish depending on your faction).
+  - Displays a live Nampower-driven HP Bar of the EFC right inside the reporter frame.
+- **Modern Restyled Config Panel:**
+  - Fast, modular interface. Click the Minimap button (or use slash commands) to toggle features independently.
+
+## Requirements
+
+To unlock the full power of TurtlePvP (accurate distance and precise HP tracking), install the following optional dependencies:
+- **[Nampower](https://twinstar-addons.github.io/addons/nampower/)** (Fetches absolute Player HP limits and GUIDs for tracking behind objects)
+- **[UnitXP](https://github.com/allfoxwy/UnitXP)** (Calculates precise 3D distances between you and the enemy carriers/arena players)
 
 ## Commands
-Type `/wfc info` in the game to pull up the full control list.
 
-- `/wfc hp on/off`
-- `/wfc thresholds 75 50 25`
-- `/wfc frame on/off`
-- `/wfc reset` (Resets UI window position)
-- `/wfc debug on/off`
-- `/wfc status` Shows current system status and explicitly verifies if Nampower and UnitXP dependencies are active.
+- `/tpvp` or `/turtlepvp`: Open the Config Panel UI
+- `/tpvp force wsg`: Force the addon into Warsong Gulch mode (for testing outside of BGs)
+- `/tpvp force arena`: Force the addon into Arena mode (for testing outside of Arenas)
+- `/tpvp reset`: Resets all frame positions back to defaults
+- `/tpvp status`: Prints module and dependency activation status to your chat log
+- `/tpvp debug on/off`: Toggles internal debugging output
+
+## Moving Frames
+
+You can freely click and drag the **Flag Tracking HUD**, the **Arena Enemies HUD**, and the **EFC Reporter Grid** anywhere on your screen. Their positions are automatically saved to your character's `TurtlePvPConfig`.
+
+## Credits & Thanks
+- Included `v3.1 EFC Reporter` based on the original EFCReport concept by **Cubenicke (Yrrol@vanillagaming)**.
+- Original map positioning layout and location icons by **lanevegame**.
+- Initial design and architecture inspired by **Spy**, **TurtleHonorSpyEnhanced**, and vanilla tracking mechanics.

@@ -1,0 +1,16 @@
+## Interface: 11200
+## Title: TurtlePvP
+## Notes: PvP utility toolkit: WSG Flag Caller + Arena Enemy Tracker + EFC Reporter
+## Version: 3.1.0
+## Author: DrOmida
+## SavedVariables: TurtlePvPConfig
+## OptionalDeps: Nampower, UnitXP
+
+TurtlePvP_Core.lua
+TurtlePvP_Tracker.lua
+TurtlePvP_Minimap.lua
+TurtlePvP_Frame.lua
+TurtlePvP_Combat.lua
+TurtlePvP_Arena.lua
+TurtlePvP_EFCReport.lua
+TurtlePvP_Commands.lua

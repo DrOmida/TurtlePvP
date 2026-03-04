@@ -1,4 +1,4 @@
-WSGFCConfig = WSGFCConfig or {
+TurtlePvPConfig = TurtlePvPConfig or {
     wsgEnabled = true,
     hpCallouts = true,
     hpThresholds = {75, 50, 25},
@@ -50,7 +50,7 @@ function WFC:GetClassColor(classNameToken)
 end
 
 function WFC:Debug(msg)
-    if WSGFCConfig.debug then
+    if TurtlePvPConfig.debug then
         DEFAULT_CHAT_FRAME:AddMessage("|cff00ccff[WFC Debug]|r " .. tostring(msg))
     end
 end
@@ -84,7 +84,7 @@ function WFC:CheckZone(force)
 
     WFC:Debug("Zone check: zone=" .. tostring(zone) .. " inWSG=" .. tostring(isWSG) .. " inArena=" .. tostring(isArena))
 
-    if isWSG and WSGFCConfig.wsgEnabled then
+    if isWSG and TurtlePvPConfig.wsgEnabled then
         if not WFC.inWSG then
             WFC.inWSG = true
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
@@ -113,7 +113,7 @@ function WFC:CheckZone(force)
         end
     end
     
-    if isArena and WSGFCConfig.arenaEnabled then
+    if isArena and TurtlePvPConfig.arenaEnabled then
         if not WFC.inArena then
             WFC.inArena = true
             if WFC.Tracker and WFC.Tracker.Enable then WFC.Tracker:Enable() end
@@ -134,23 +134,23 @@ end
 
 frame:SetScript("OnEvent", function()
     if event == "VARIABLES_LOADED" then
-        if WSGFCConfig.hpCallouts == nil then WSGFCConfig.hpCallouts = true end
-        if not WSGFCConfig.hpThresholds then WSGFCConfig.hpThresholds = {75, 50, 25} end
-        if WSGFCConfig.showFrame == nil then WSGFCConfig.showFrame = true end
-        if not WSGFCConfig.framePoint then WSGFCConfig.framePoint = "TOP" end
-        if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
-        if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
-        if WSGFCConfig.locked == nil then WSGFCConfig.locked = false end
+        if TurtlePvPConfig.hpCallouts == nil then TurtlePvPConfig.hpCallouts = true end
+        if not TurtlePvPConfig.hpThresholds then TurtlePvPConfig.hpThresholds = {75, 50, 25} end
+        if TurtlePvPConfig.showFrame == nil then TurtlePvPConfig.showFrame = true end
+        if not TurtlePvPConfig.framePoint then TurtlePvPConfig.framePoint = "TOP" end
+        if not TurtlePvPConfig.frameX then TurtlePvPConfig.frameX = 0 end
+        if not TurtlePvPConfig.frameY then TurtlePvPConfig.frameY = -150 end
+        if TurtlePvPConfig.locked == nil then TurtlePvPConfig.locked = false end
         
-        if WSGFCConfig.wsgEnabled == nil then WSGFCConfig.wsgEnabled = true end
-        if WSGFCConfig.arenaEnabled == nil then WSGFCConfig.arenaEnabled = true end
-        if WSGFCConfig.arenaDistance == nil then WSGFCConfig.arenaDistance = true end
-        if WSGFCConfig.arenaTrinkets == nil then WSGFCConfig.arenaTrinkets = true end
-        if not WSGFCConfig.minimapPos then WSGFCConfig.minimapPos = 45 end
-        if not WSGFCConfig.arenaFramePoint then WSGFCConfig.arenaFramePoint = "CENTER" end
-        if not WSGFCConfig.arenaFrameX then WSGFCConfig.arenaFrameX = 0 end
-        if not WSGFCConfig.arenaFrameY then WSGFCConfig.arenaFrameY = 0 end
-        if WSGFCConfig.arenaLocked == nil then WSGFCConfig.arenaLocked = false end
+        if TurtlePvPConfig.wsgEnabled == nil then TurtlePvPConfig.wsgEnabled = true end
+        if TurtlePvPConfig.arenaEnabled == nil then TurtlePvPConfig.arenaEnabled = true end
+        if TurtlePvPConfig.arenaDistance == nil then TurtlePvPConfig.arenaDistance = true end
+        if TurtlePvPConfig.arenaTrinkets == nil then TurtlePvPConfig.arenaTrinkets = true end
+        if not TurtlePvPConfig.minimapPos then TurtlePvPConfig.minimapPos = 45 end
+        if not TurtlePvPConfig.arenaFramePoint then TurtlePvPConfig.arenaFramePoint = "CENTER" end
+        if not TurtlePvPConfig.arenaFrameX then TurtlePvPConfig.arenaFrameX = 0 end
+        if not TurtlePvPConfig.arenaFrameY then TurtlePvPConfig.arenaFrameY = 0 end
+        if TurtlePvPConfig.arenaLocked == nil then TurtlePvPConfig.arenaLocked = false end
 
         -- Re-evaluate capability mod presence after all addons have loaded
         WFC.hasNampower = (GetNampowerVersion ~= nil)

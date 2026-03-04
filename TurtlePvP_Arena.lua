@@ -43,17 +43,17 @@ unlockBg:SetTexture(0, 1, 0, 0.3)
 hud.unlockBg = unlockBg
 
 hud:RegisterForDrag("LeftButton")
-hud:SetScript("OnDragStart", function() if not WSGFCConfig.arenaLocked then this:StartMoving() end end)
+hud:SetScript("OnDragStart", function() if not TurtlePvPConfig.arenaLocked then this:StartMoving() end end)
 hud:SetScript("OnDragStop", function()
     this:StopMovingOrSizing()
     local point, _, relativePoint, xOfs, yOfs = this:GetPoint()
-    WSGFCConfig.arenaFramePoint = point
-    WSGFCConfig.arenaFrameX = xOfs
-    WSGFCConfig.arenaFrameY = yOfs
+    TurtlePvPConfig.arenaFramePoint = point
+    TurtlePvPConfig.arenaFrameX = xOfs
+    TurtlePvPConfig.arenaFrameY = yOfs
 end)
 
 local function UpdateArenaLock()
-    if WSGFCConfig.arenaLocked then
+    if TurtlePvPConfig.arenaLocked then
         hud.unlockBg:Hide()
         hud:EnableMouse(false)
         for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("") end
@@ -97,21 +97,21 @@ for i=1, MAX_ENEMIES do
     
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnClick", function()
-        if arg1 == "LeftButton" and not WSGFCConfig.arenaLocked then
+        if arg1 == "LeftButton" and not TurtlePvPConfig.arenaLocked then
             if row.targetName then TargetByName(row.targetName, true) end
         elseif arg1 == "RightButton" then
-            WSGFCConfig.arenaLocked = not WSGFCConfig.arenaLocked
+            TurtlePvPConfig.arenaLocked = not TurtlePvPConfig.arenaLocked
             UpdateArenaLock()
         end
     end)
     
-    row:SetScript("OnDragStart", function() if not WSGFCConfig.arenaLocked then hud:StartMoving() end end)
+    row:SetScript("OnDragStart", function() if not TurtlePvPConfig.arenaLocked then hud:StartMoving() end end)
     row:SetScript("OnDragStop", function()
         hud:StopMovingOrSizing()
         local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
-        WSGFCConfig.arenaFramePoint = point
-        WSGFCConfig.arenaFrameX = xOfs
-        WSGFCConfig.arenaFrameY = yOfs
+        TurtlePvPConfig.arenaFramePoint = point
+        TurtlePvPConfig.arenaFrameX = xOfs
+        TurtlePvPConfig.arenaFrameY = yOfs
     end)
     
     row:Hide()
@@ -120,7 +120,7 @@ end
 
 function WFC.Arena:Enable()
     WFC.Arena.enabled = true
-    hud:SetPoint(WSGFCConfig.arenaFramePoint or "CENTER", UIParent, WSGFCConfig.arenaFramePoint or "CENTER", WSGFCConfig.arenaFrameX or 0, WSGFCConfig.arenaFrameY or 0)
+    hud:SetPoint(TurtlePvPConfig.arenaFramePoint or "CENTER", UIParent, TurtlePvPConfig.arenaFramePoint or "CENTER", TurtlePvPConfig.arenaFrameX or 0, TurtlePvPConfig.arenaFrameY or 0)
     UpdateArenaLock()
     hud:Show()
     frame:RegisterEvent("UNIT_DIED")
@@ -224,7 +224,7 @@ frame:SetScript("OnEvent", function(...)
                 end
                 
                 -- Detect Trinkets
-                if WSGFCConfig.arenaTrinkets and WFC.Arena.TRINKET_SPELLS[spellId] and WFC.Arena.enemies[casterName] then
+                if TurtlePvPConfig.arenaTrinkets and WFC.Arena.TRINKET_SPELLS[spellId] and WFC.Arena.enemies[casterName] then
                     local tName = WFC.Arena.TRINKET_SPELLS[spellId]
                     WFC.Arena.enemies[casterName].lastTrinketTime = GetTime()
                     WFC.Arena.enemies[casterName].trinketSpell = tName
@@ -236,7 +236,7 @@ frame:SetScript("OnEvent", function(...)
 end)
 
 function WFC.Arena:UpdateHUD()
-    if not WSGFCConfig.showFrame then 
+    if not TurtlePvPConfig.showFrame then 
         hud:Hide()
         return
     else
@@ -273,7 +273,7 @@ function WFC.Arena:UpdateHUD()
         
         -- Distance
         row.distText:SetText("--")
-        if WSGFCConfig.arenaDistance and UnitXP then
+        if TurtlePvPConfig.arenaDistance and UnitXP then
             local success, dist = pcall(function() return UnitXP("distanceBetween", "player", eData.guid) end)
             if success and dist then
                 if dist <= 20 then row.distText:SetText(string.format("|cffff0000%d yd|r", dist))

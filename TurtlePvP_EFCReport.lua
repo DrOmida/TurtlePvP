@@ -1,5 +1,5 @@
 --[[
-WSGFlagCaller_EFCReport.lua
+TurtlePvP_EFCReport.lua
 EFC Location Reporter — WSG only
 Adapted from EFCReport by Cubenicke (Yrrol@vanillagaming)
 Integrated into TurtlePvP with Nampower HP bar & restyled frame.
@@ -40,8 +40,8 @@ local BUTTONS = {
     { x={34,34}, y={-194,-2}, w=64, h=32, tex="hroof.blp",   text="EFC Horde roof!" },
 }
 
--- Saved position in WSGFCConfig.efcFrameX/Y
-if not WSGFCConfig then WSGFCConfig = {} end
+-- Saved position in TurtlePvPConfig.efcFrameX/Y
+if not TurtlePvPConfig then TurtlePvPConfig = {} end
 
 local function GetLanguage()
     local f = UnitFactionGroup("player")
@@ -56,8 +56,8 @@ function WFC.EFCReport:Create()
     if self.created then return end
     self.created = true
 
-    local fx = WSGFCConfig.efcFrameX or 400
-    local fy = WSGFCConfig.efcFrameY or 300
+    local fx = TurtlePvPConfig.efcFrameX or 400
+    local fy = TurtlePvPConfig.efcFrameY or 300
     local ix = GetFactionIdx()
 
     local frame = CreateFrame("Frame", "TurtlePvPEFCFrame", UIParent)
@@ -84,8 +84,8 @@ function WFC.EFCReport:Create()
         if arg1 == "LeftButton" then
             this:StopMovingOrSizing()
             local _, _, _, x, y = this:GetPoint()
-            WSGFCConfig.efcFrameX = x
-            WSGFCConfig.efcFrameY = -y
+            TurtlePvPConfig.efcFrameX = x
+            TurtlePvPConfig.efcFrameY = -y
         end
     end)
 

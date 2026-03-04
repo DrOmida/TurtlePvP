@@ -17,7 +17,7 @@ end
 function WFC.Combat:ResetPhases(carrierName)
     if not carrierName then return end
     WFC.Combat.phases[carrierName] = {}
-    for _, t in ipairs(WSGFCConfig.hpThresholds) do
+    for _, t in ipairs(TurtlePvPConfig.hpThresholds) do
         WFC.Combat.phases[carrierName][t] = false
     end
 end
@@ -47,7 +47,7 @@ combatFrame:SetScript("OnEvent", function()
 end)
 
 function WFC.Combat:CheckHP(carrierName, hp, maxHp, unitId)
-    if not WSGFCConfig.hpCallouts then return end
+    if not TurtlePvPConfig.hpCallouts then return end
     if not hp or not maxHp or maxHp == 0 then return end
     
     local myFaction = UnitFactionGroup("player")
@@ -65,7 +65,7 @@ function WFC.Combat:CheckHP(carrierName, hp, maxHp, unitId)
     end
 
     local thresholds = {}
-    for _, v in ipairs(WSGFCConfig.hpThresholds) do table.insert(thresholds, v) end
+    for _, v in ipairs(TurtlePvPConfig.hpThresholds) do table.insert(thresholds, v) end
     table.sort(thresholds, function(a, b) return a > b end)
 
     for _, t in ipairs(thresholds) do

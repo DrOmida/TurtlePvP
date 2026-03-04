@@ -5,7 +5,7 @@ function WFC.Frame:Initialize()
     hud = CreateFrame("Frame", "WSGFCHud", UIParent)
     hud:SetWidth(200)
     hud:SetHeight(60)
-    hud:SetPoint(WSGFCConfig.framePoint, UIParent, WSGFCConfig.framePoint, WSGFCConfig.frameX, WSGFCConfig.frameY)
+    hud:SetPoint(TurtlePvPConfig.framePoint, UIParent, TurtlePvPConfig.framePoint, TurtlePvPConfig.frameX, TurtlePvPConfig.frameY)
     hud:SetMovable(true)
     hud:SetMovable(true)
     
@@ -55,8 +55,8 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnClick", function()
         if arg1 == "RightButton" then
-            WSGFCConfig.locked = not WSGFCConfig.locked
-            if WSGFCConfig.locked then
+            TurtlePvPConfig.locked = not TurtlePvPConfig.locked
+            if TurtlePvPConfig.locked then
                 WFC:Print("HUD Locked.")
             else
                 WFC:Print("HUD Unlocked. You can now drag the HUD.")
@@ -75,16 +75,16 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     
     row:RegisterForDrag("LeftButton")
     row:SetScript("OnDragStart", function() 
-        if not WSGFCConfig.locked then 
+        if not TurtlePvPConfig.locked then 
             parent:StartMoving() 
         end 
     end)
     row:SetScript("OnDragStop", function() 
         parent:StopMovingOrSizing() 
         local p, _, rp, x, y = parent:GetPoint()
-        WSGFCConfig.framePoint = p
-        WSGFCConfig.frameX = x
-        WSGFCConfig.frameY = y
+        TurtlePvPConfig.framePoint = p
+        TurtlePvPConfig.frameX = x
+        TurtlePvPConfig.frameY = y
     end)
     
     return row
@@ -92,7 +92,7 @@ end
 
 function WFC.Frame:UpdateLockState()
     if not hud then return end
-    if WSGFCConfig.locked then
+    if TurtlePvPConfig.locked then
         hud.unlockBg:Hide()
     else
         hud.unlockBg:Show()
@@ -105,7 +105,7 @@ function WFC.Frame:Disable()
 end
 
 function WFC.Frame:UpdateVisibility()
-    if not WSGFCConfig.showFrame or not WFC.inWSG then
+    if not TurtlePvPConfig.showFrame or not WFC.inWSG then
         WFC.Frame:Disable()
         return
     end

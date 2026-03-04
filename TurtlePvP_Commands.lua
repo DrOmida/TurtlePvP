@@ -24,10 +24,10 @@ SlashCmdList["TURTLEPVP"] = function(msg)
         end
     elseif cmd == "debug" then
         if args[2] == "on" then
-            WSGFCConfig.debug = true
+            TurtlePvPConfig.debug = true
             WFC:Print("Debug mode enabled.")
         else
-            WSGFCConfig.debug = false
+            TurtlePvPConfig.debug = false
             WFC:Print("Debug mode disabled.")
         end
     elseif cmd == "force" then
@@ -47,12 +47,12 @@ SlashCmdList["TURTLEPVP"] = function(msg)
             WFC:Print("Force-enabled Arena mode.")
         end
     elseif cmd == "reset" then
-        WSGFCConfig.framePoint = "TOP"
-        WSGFCConfig.frameX = 0
-        WSGFCConfig.frameY = -150
-        WSGFCConfig.arenaFramePoint = "CENTER"
-        WSGFCConfig.arenaFrameX = 0
-        WSGFCConfig.arenaFrameY = 0
+        TurtlePvPConfig.framePoint = "TOP"
+        TurtlePvPConfig.frameX = 0
+        TurtlePvPConfig.frameY = -150
+        TurtlePvPConfig.arenaFramePoint = "CENTER"
+        TurtlePvPConfig.arenaFrameX = 0
+        TurtlePvPConfig.arenaFrameY = 0
         WFC:Print("Frame positions reset.")
     elseif cmd == "status" then
         local onOffStr = function(b) return b and "|cff00ff00[ON]|r" or "|cffff0000[OFF]|r" end
@@ -61,8 +61,8 @@ SlashCmdList["TURTLEPVP"] = function(msg)
         local unitXPStr = UnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
         WFC:Print("Nampower (Guids/HP): " .. npStr)
         WFC:Print("UnitXP (Distance): " .. unitXPStr)
-        WFC:Print("WSG Caller: " .. onOffStr(WSGFCConfig.wsgEnabled))
-        WFC:Print("Arena HUD: " .. onOffStr(WSGFCConfig.arenaEnabled))
-        WFC:Print("Debug: " .. onOffStr(WSGFCConfig.debug))
+        WFC:Print("WSG Caller: " .. onOffStr(TurtlePvPConfig.wsgEnabled))
+        WFC:Print("Arena HUD: " .. onOffStr(TurtlePvPConfig.arenaEnabled))
+        WFC:Print("Debug: " .. onOffStr(TurtlePvPConfig.debug))
     end
 end
