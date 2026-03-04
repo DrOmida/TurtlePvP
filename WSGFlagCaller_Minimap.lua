@@ -86,23 +86,30 @@ local menuItems = {
         func = function() WFC.Minimap:TogglePanel() end },
 }
 local contextMenu = CreateFrame("Frame", "TurtlePvPContextMenu", UIParent, "UIDropDownMenuTemplate")
-UIDropDownMenu_Initialize(contextMenu, function()
-    for _, item in ipairs(menuItems) do
-        local info = {}
-        info.text = item.text
-        info.notCheckable = item.notCheckable
-        info.isTitle = item.isTitle
-        info.func = item.func
-        UIDropDownMenu_AddButton(info)
+local menuInitialized = false
+local function ShowContextMenu()
+    if not menuInitialized then
+        UIDropDownMenu_Initialize(contextMenu, function()
+            for _, item in ipairs(menuItems) do
+                local info = UIDropDownMenu_CreateInfo()
+                info.text = item.text
+                info.notCheckable = item.notCheckable
+                info.isTitle = item.isTitle
+                info.func = item.func
+                UIDropDownMenu_AddButton(info)
+            end
+        end, "MENU")
+        menuInitialized = true
     end
-end, "MENU")
+    ToggleDropDownMenu(1, nil, contextMenu, "cursor", 0, 0)
+end
 
 mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 mmButton:SetScript("OnClick", function()
     if arg1 == "LeftButton" then
         WFC.Minimap:TogglePanel()
     else
-        ToggleDropDownMenu(1, nil, contextMenu, "cursor", 0, 0)
+        ShowContextMenu()
     end
 end)
 
@@ -209,12 +216,13 @@ local tabPages = {}
 local function SelectTab(idx)
     for i, t in ipairs(tabs) do
         if i == idx then
-            t:SetNormalFontObject("GameFontHighlight")
+            t:SetNormalFontObject(GameFontHighlight)
             local f = t:GetFontString()
             if f then f:SetTextColor(TAB_ACTIVE_COLOR[1], TAB_ACTIVE_COLOR[2], TAB_ACTIVE_COLOR[3]) end
             t.underline:Show()
             if tabPages[i] then tabPages[i]:Show() end
         else
+            t:SetNormalFontObject(GameFontNormal)
             local f = t:GetFontString()
             if f then f:SetTextColor(TAB_INACTIVE_COLOR[1], TAB_INACTIVE_COLOR[2], TAB_INACTIVE_COLOR[3]) end
             t.underline:Hide()
