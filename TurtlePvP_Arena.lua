@@ -53,8 +53,12 @@ end)
 local function UpdateArenaLock()
     if TurtlePvPConfig.arenaLocked then
         hud.unlockBg:Hide()
+        hud:EnableMouse(false)
+        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("") end
     else
         hud.unlockBg:Show()
+        hud:EnableMouse(true)
+        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("LeftButton") end
     end
 end
 
@@ -131,29 +135,34 @@ function WFC.Arena:Enable()
     UpdateArenaLock()
     hud:Show()
     frame:RegisterEvent("UNIT_DIED")
-    frame:RegisterEvent("SPELL_START_OTHER")
+    frame:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_BUFF")
+    frame:RegisterEvent("CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE")
+    frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_BUFFS")
     -- Arena Chat Hooks
     frame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
     frame:RegisterEvent("CHAT_MSG_MONSTER_EMOTE")
     WFC.Arena:Reset()
     
     -- 0.5s Scanner
-    hud.ticker = CreateFrame("Frame")
-    hud.ticker:SetScript("OnUpdate", function()
-        this.elapsed = (this.elapsed or 0) + arg1
-        if this.elapsed > 0.5 then
-            this.elapsed = 0
-            WFC.Arena:Scan()
-            WFC.Arena:UpdateHUD()
-        end
-    end)
+    if not hud.ticker then
+        hud.ticker = CreateFrame("Frame")
+        hud.ticker:SetScript("OnUpdate", function()
+            this.elapsed = (this.elapsed or 0) + arg1
+            if this.elapsed > 0.5 then
+                this.elapsed = 0
+                if WFC.Arena.enabled then
+                    WFC.Arena:Scan()
+                    WFC.Arena:UpdateHUD()
+                end
+            end
+        end)
+    end
 end
 
 function WFC.Arena:Disable()
     WFC.Arena.enabled = false
     hud:Hide()
     frame:UnregisterAllEvents()
-    if hud.ticker then hud.ticker:SetScript("OnUpdate", nil) end
     WFC.Arena:Reset()
 end
 
@@ -170,19 +179,9 @@ end
 function WFC.Arena:AddEnemy(guid, name)
     if not guid or not name or name == "Unknown" then return end
     
-    -- Deduplication logic fix: check correctly by indexing and array enforce
     if not WFC.Arena.enemies[name] then
         WFC.Arena.enemies[name] = { guid = guid }
-        -- Bulletproof array check to explicitly stop screenshot ghost clones
-        local found = false
-        for _, n in ipairs(WFC.Arena.orderedNames) do
-            if n == name then found = true; break; end
-        end
-        if not found then
-            table.insert(WFC.Arena.orderedNames, name)
-        end
     else
-        -- If they already exist, just forcefully update their GUID in case it was bad previously
         WFC.Arena.enemies[name].guid = guid
     end
     
@@ -250,25 +249,17 @@ frame:SetScript("OnEvent", function(...)
             WFC:Print("|cffffff00Arena Match Ended! Cleared board.|r")
             WFC.Arena:Reset()
         end
-    elseif event == "SPELL_START_OTHER" then
-        local spellId = arg2
-        local casterGuid = arg3
-        if casterGuid and spellId then
-            local casterName = UnitName(casterGuid)
-            if casterName then
-                -- Add to enemies if not there
-                local myFaction = UnitFactionGroup("player")
-                local isEnemy = UnitCanAttack("player", casterGuid) or (UnitFactionGroup(casterGuid) and UnitFactionGroup(casterGuid) ~= myFaction)
-                if isEnemy then
-                    WFC.Arena:AddEnemy(casterGuid, casterName)
-                end
-                
-                -- Detect PvP Trinkets specifically
-                if TurtlePvPConfig.arenaTrinkets and WFC.Arena.TRINKET_SPELLS[spellId] and WFC.Arena.enemies[casterName] then
-                    local texPath = WFC.Arena.TRINKET_SPELLS[spellId]
-                    WFC.Arena.enemies[casterName].lastTrinketTime = GetTime()
-                    WFC.Arena.enemies[casterName].trinketSpell = texPath
-                    WFC:Print("|cffff0000[Arena]|r " .. casterName .. " used their PvP Trinket!")
+    elseif event == "CHAT_MSG_SPELL_HOSTILEPLAYER_BUFF" or event == "CHAT_MSG_SPELL_HOSTILEPLAYER_DAMAGE" or event == "CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_BUFFS" then
+        if TurtlePvPConfig.arenaTrinkets and arg1 then
+            if string.find(arg1, "Will of the Forsaken") or string.find(arg1, "PvP Trinket") or string.find(arg1, "Stoneform") or string.find(arg1, "Escape Artist") or string.find(arg1, "Perception") then
+                for casterName in string.gfind(arg1, "^([^%s]+)") do
+                    -- Strip trailing apostrophe S if the log says "Dadger's PvP Trinket"
+                    casterName = string.gsub(casterName, "'s$", "")
+                    if WFC.Arena.enemies[casterName] then
+                        WFC.Arena.enemies[casterName].lastTrinketTime = GetTime()
+                        WFC.Arena.enemies[casterName].trinketSpell = "Interface\\Icons\\INV_Jewelry_TrinketPVP_02"
+                        WFC:Print("|cffff0000[Arena]|r " .. casterName .. " used their PvP Trinket!")
+                    end
                 end
             end
         end
@@ -284,11 +275,15 @@ function WFC.Arena:UpdateHUD()
     end
 
     local rowIdx = 1
-    for _, name in ipairs(WFC.Arena.orderedNames) do
+    local cleanNames = {}
+    for n, _ in pairs(WFC.Arena.enemies) do
+        table.insert(cleanNames, n)
+    end
+    table.sort(cleanNames)
+
+    for _, name in ipairs(cleanNames) do
         if rowIdx > MAX_ENEMIES then break end
         local eData = WFC.Arena.enemies[name]
-        
-        -- Incase it hit a nil bug condition during removal
         if eData then
             local row = hud.rows[rowIdx]
             row.targetName = name
