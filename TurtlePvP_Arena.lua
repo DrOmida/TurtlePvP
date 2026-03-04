@@ -20,7 +20,7 @@ local MAX_ENEMIES = 8
 local frame = CreateFrame("Frame")
 local hud = CreateFrame("Frame", "TurtlePvPArenaHUD", UIParent)
 
--- Arena HUD Setup
+-- Arena HUD Setup (Restyled to match EFCReport/Config layout)
 hud:SetWidth(200)
 hud:SetHeight(30 + (MAX_ENEMIES * 25))
 hud:EnableMouse(true)
@@ -29,17 +29,22 @@ hud:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 hud:Hide()
 hud.rows = {}
 
-local bg = hud:CreateTexture(nil, "BACKGROUND")
-bg:SetAllPoints()
-bg:SetTexture(0, 0, 0, 0.5)
+hud:SetBackdrop({
+    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 8,
+    insets = { left = 2, right = 2, top = 2, bottom = 2 },
+})
+hud:SetBackdropColor(0, 0, 0, 0.88)
+hud:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
 
 local title = hud:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-title:SetPoint("TOP", hud, "TOP", 0, -5)
-title:SetText("Arena Enemies")
+title:SetPoint("TOP", hud, "TOP", 0, -8)
+title:SetText("|cffffd700Arena Enemies|r")
 
 local unlockBg = hud:CreateTexture(nil, "BACKGROUND")
 unlockBg:SetAllPoints()
-unlockBg:SetTexture(0, 1, 0, 0.3)
+unlockBg:SetTexture(0, 1, 0, 0.2)
 hud.unlockBg = unlockBg
 
 hud:RegisterForDrag("LeftButton")
@@ -66,9 +71,14 @@ end
 
 for i=1, MAX_ENEMIES do
     local row = CreateFrame("Button", nil, hud)
-    row:SetWidth(200)
-    row:SetHeight(25)
-    row:SetPoint("TOPLEFT", hud, "TOPLEFT", 0, -20 - ((i-1)*25))
+    row:SetWidth(190)
+    row:SetHeight(20)
+    row:SetPoint("TOPLEFT", hud, "TOPLEFT", 5, -24 - ((i-1)*22))
+    
+    local tex = row:CreateTexture(nil, "BACKGROUND")
+    tex:SetAllPoints()
+    tex:SetTexture(0, 0, 0, 0.5)
+    row.bg = tex
     
     local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     nameText:SetPoint("LEFT", row, "LEFT", 5, 0)
@@ -77,13 +87,18 @@ for i=1, MAX_ENEMIES do
     
     local hpBar = CreateFrame("StatusBar", nil, row)
     hpBar:SetWidth(90)
-    hpBar:SetHeight(15)
+    hpBar:SetHeight(12)
     hpBar:SetPoint("RIGHT", row, "RIGHT", -5, 0)
     hpBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
     hpBar:SetStatusBarColor(0, 1, 0)
     hpBar:SetMinMaxValues(0, 100)
     hpBar:SetValue(100)
     row.hpBar = hpBar
+
+    local hpText = hpBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hpText:SetPoint("CENTER", hpBar, "CENTER", 0, 0)
+    hpText:SetText("100%")
+    row.hpText = hpText
     
     local distText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     distText:SetPoint("RIGHT", hpBar, "LEFT", -5, 0)
@@ -126,8 +141,10 @@ function WFC.Arena:Enable()
     frame:RegisterEvent("UNIT_DIED")
     frame:RegisterEvent("SPELL_START_OTHER")
     frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE")
-    WFC.Arena.enemies = {}
-    WFC.Arena.orderedNames = {}
+    -- Arena Chat Hooks
+    frame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
+    frame:RegisterEvent("CHAT_MSG_MONSTER_EMOTE")
+    WFC.Arena:Reset()
     
     -- 0.5s Scanner
     hud.ticker = CreateFrame("Frame")
@@ -146,19 +163,34 @@ function WFC.Arena:Disable()
     hud:Hide()
     frame:UnregisterAllEvents()
     if hud.ticker then hud.ticker:SetScript("OnUpdate", nil) end
+    WFC.Arena:Reset()
+end
+
+function WFC.Arena:Reset()
     WFC.Arena.enemies = {}
     WFC.Arena.orderedNames = {}
+    
+    for i=1, MAX_ENEMIES do
+        hud.rows[i]:Hide()
+    end
+    hud:SetHeight(30)
 end
 
 function WFC.Arena:AddEnemy(guid, name)
-    if not guid or not name then return end
+    if not guid or not name or name == "Unknown" then return end
+    
+    -- Deduplication logic fix: check correctly by indexing
     if not WFC.Arena.enemies[name] then
         WFC.Arena.enemies[name] = { guid = guid }
         table.insert(WFC.Arena.orderedNames, name)
-        
-        if WFC.Tracker and WFC.Tracker.ProcessGUID then
-            WFC.Tracker:ProcessGUID(guid)
-        end
+    else
+        -- If they already exist, just forcefully update their GUID in case it was bad previously
+        WFC.Arena.enemies[name].guid = guid
+    end
+    
+    -- Sync GUID to tracker engine
+    if WFC.Tracker and WFC.Tracker.ProcessGUID then
+        WFC.Tracker:ProcessGUID(guid)
     end
 end
 
@@ -210,6 +242,16 @@ frame:SetScript("OnEvent", function(...)
                 WFC.Arena:UpdateHUD()
             end
         end
+    elseif event == "CHAT_MSG_MONSTER_YELL" or event == "CHAT_MSG_MONSTER_EMOTE" then
+        local msg = arg1
+        if not msg then return end
+        if string.find(msg, "The Arena battle has begun!") then
+            WFC.Arena:Reset()
+            WFC:Print("|cffffff00Arena Match Started! Tracking logic reset.|r")
+        elseif string.find(msg, "team wins!") then
+            WFC:Print("|cffffff00Arena Match Ended! Cleared board.|r")
+            WFC.Arena:Reset()
+        end
     elseif event == "SPELL_START_OTHER" then
         local spellId = arg2
         local casterGuid = arg3
@@ -247,55 +289,67 @@ function WFC.Arena:UpdateHUD()
     for _, name in ipairs(WFC.Arena.orderedNames) do
         if rowIdx > MAX_ENEMIES then break end
         local eData = WFC.Arena.enemies[name]
-        local row = hud.rows[rowIdx]
         
-        row.targetName = name
-        
-        -- HP and Distance
-        local hp, hpMax = 0, 100
-        
-        if GetUnitField then
-            hp = GetUnitField(eData.guid, "health") or 0
-            hpMax = GetUnitField(eData.guid, "maxHealth") or 100
-        elseif UnitName("target") == name then
-            hp = UnitHealth("target")
-            hpMax = UnitHealthMax("target")
-        end
-        eData.hp = hp
-        eData.hpMax = hpMax
-        
-        row.hpBar:SetMinMaxValues(0, hpMax)
-        row.hpBar:SetValue(hp)
-        local pct = hp / hpMax
-        if pct > 0.5 then row.hpBar:SetStatusBarColor(0, 1, 0)
-        elseif pct > 0.25 then row.hpBar:SetStatusBarColor(1, 1, 0)
-        else row.hpBar:SetStatusBarColor(1, 0, 0) end
-        
-        -- Distance
-        row.distText:SetText("--")
-        if TurtlePvPConfig.arenaDistance and UnitXP then
-            local success, dist = pcall(function() return UnitXP("distanceBetween", "player", eData.guid) end)
-            if success and dist then
-                if dist <= 20 then row.distText:SetText(string.format("|cffff0000%d yd|r", dist))
-                elseif dist <= 40 then row.distText:SetText(string.format("|cffffff00%d yd|r", dist))
-                else row.distText:SetText(string.format("|cffffffff%d yd|r", dist)) end
+        -- Incase it hit a nil bug condition during removal
+        if eData then
+            local row = hud.rows[rowIdx]
+            row.targetName = name
+            
+            -- HP and Distance
+            local hp, hpMax = 0, 100
+            
+            if GetUnitField then
+                hp = GetUnitField(eData.guid, "health") or 0
+                hpMax = GetUnitField(eData.guid, "maxHealth") or 100
+            elseif UnitName("target") == name then
+                hp = UnitHealth("target")
+                hpMax = UnitHealthMax("target")
             end
-        end
+            eData.hp = hp
+            eData.hpMax = hpMax
+            
+            if hpMax and hpMax > 0 then
+                row.hpBar:SetMinMaxValues(0, hpMax)
+                row.hpBar:SetValue(hp)
+                local pct = hp / hpMax
+                row.hpText:SetText(math.floor(pct * 100) .. "%")
+                
+                if pct > 0.5 then row.hpBar:SetStatusBarColor(0, 1, 0)
+                elseif pct > 0.25 then row.hpBar:SetStatusBarColor(1, 1, 0)
+                else row.hpBar:SetStatusBarColor(1, 0, 0) end
+            else
+                row.hpBar:SetMinMaxValues(0, 100)
+                row.hpBar:SetValue(0)
+                row.hpBar:SetStatusBarColor(0.5, 0.5, 0.5)
+                row.hpText:SetText("--")
+            end
+            
+            -- Distance
+            row.distText:SetText("--")
+            if TurtlePvPConfig.arenaDistance and UnitXP then
+                local success, dist = pcall(function() return UnitXP("distanceBetween", "player", eData.guid) end)
+                if success and dist then
+                    if dist <= 20 then row.distText:SetText(string.format("|cffff0000%d yd|r", dist))
+                    elseif dist <= 40 then row.distText:SetText(string.format("|cffffff00%d yd|r", dist))
+                    else row.distText:SetText(string.format("|cffffffff%d yd|r", dist)) end
+                end
+            end
 
-        local classToken = nil
-        if UnitClass then _, classToken = UnitClass(eData.guid) end
-        local cColor = classToken and WFC:GetClassColor(classToken) or "FFFFFF"
-        row.nameText:SetText("|cff" .. cColor .. name .. "|r")
-        
-        -- Trinket CD (Assuming 2 min CD for standard PvP trinket, just show [🔔] for 10s)
-        if eData.lastTrinketTime and (GetTime() - eData.lastTrinketTime) < 10 then
-            row.trinketIcon:SetText("|cffffff00[🔔]|r")
-        else
-            row.trinketIcon:SetText("")
-        end
+            local classToken = nil
+            if UnitClass then _, classToken = UnitClass(eData.guid) end
+            local cColor = classToken and WFC:GetClassColor(classToken) or "FFFFFF"
+            row.nameText:SetText("|cff" .. cColor .. name .. "|r")
+            
+            -- Trinket CD (Assuming 2 min CD for standard PvP trinket, just show [🔔] for 10s)
+            if eData.lastTrinketTime and (GetTime() - eData.lastTrinketTime) < 10 then
+                row.trinketIcon:SetText("|cffffff00[🔔]|r")
+            else
+                row.trinketIcon:SetText("")
+            end
 
-        row:Show()
-        rowIdx = rowIdx + 1
+            row:Show()
+            rowIdx = rowIdx + 1
+        end
     end
     
     -- Hide unused
@@ -303,5 +357,9 @@ function WFC.Arena:UpdateHUD()
         hud.rows[i]:Hide()
     end
     
-    hud:SetHeight(30 + ((rowIdx - 1) * 25))
+    if rowIdx > 1 then
+        hud:SetHeight(30 + ((rowIdx - 1) * 22))
+    else
+        hud:SetHeight(30) -- just title
+    end
 end
