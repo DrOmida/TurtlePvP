@@ -1,6 +1,5 @@
 WFC.Arena = {
-    enemies = {},       -- name -> { guid, classToken, hp, hpMax, lastTrinketTime, trinketSpell }
-    orderedNames = {},  -- array of names in order of detection
+    enemies = {},       -- name -> { guid, hp, hpMax, lastTrinketTime, trinketSpell }
     enabled = false
 }
 
@@ -11,9 +10,9 @@ WFC.Arena.TRINKET_SPELLS = {
 
 local MAX_ENEMIES = 8
 local frame = CreateFrame("Frame")
-local hud = CreateFrame("Frame", "TurtlePvPArenaHUD", UIParent)
+-- HUD is natively a Button so it handles drag/click safely without child desync memory crash!
+local hud = CreateFrame("Button", "TurtlePvPArenaHUD", UIParent)
 
--- Arena HUD Setup (Restyled to match EFCReport/Config layout)
 hud:SetWidth(200)
 hud:SetHeight(30 + (MAX_ENEMIES * 25))
 hud:EnableMouse(true)
@@ -38,27 +37,22 @@ unlockBg:SetHeight(20)
 unlockBg:SetTexture(0, 1, 0, 0.2)
 hud.unlockBg = unlockBg
 
--- Create a dedicated drag handle for the title area
-local dragHandle = CreateFrame("Button", nil, hud)
-dragHandle:SetPoint("TOPLEFT", hud, "TOPLEFT", 0, 0)
-dragHandle:SetPoint("TOPRIGHT", hud, "TOPRIGHT", 0, 0)
-dragHandle:SetHeight(24)
-dragHandle:RegisterForDrag("LeftButton")
-dragHandle:RegisterForClicks("RightButtonUp")
-
-local title = dragHandle:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-title:SetPoint("CENTER", dragHandle, "CENTER", 0, 0)
+local title = hud:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+title:SetPoint("TOP", hud, "TOP", 0, -8)
 title:SetText("|cffffd700Arena Enemies|r")
 
-dragHandle:SetScript("OnDragStart", function() 
+hud:RegisterForDrag("LeftButton")
+hud:RegisterForClicks("RightButtonUp")
+
+hud:SetScript("OnDragStart", function() 
     if not TurtlePvPConfig.arenaLocked then 
-        hud:StartMoving() 
+        this:StartMoving() 
     end 
 end)
 
-dragHandle:SetScript("OnDragStop", function()
-    hud:StopMovingOrSizing()
-    local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
+hud:SetScript("OnDragStop", function()
+    this:StopMovingOrSizing()
+    local point, _, relativePoint, xOfs, yOfs = this:GetPoint()
     TurtlePvPConfig.arenaFramePoint = point
     TurtlePvPConfig.arenaFrameX = xOfs
     TurtlePvPConfig.arenaFrameY = yOfs
@@ -72,7 +66,7 @@ local function UpdateArenaLock()
     end
 end
 
-dragHandle:SetScript("OnClick", function()
+hud:SetScript("OnClick", function()
     if arg1 == "RightButton" then
         TurtlePvPConfig.arenaLocked = not TurtlePvPConfig.arenaLocked
         UpdateArenaLock()
@@ -140,7 +134,13 @@ end
 function WFC.Arena:Enable()
     if WFC.Arena.enabled then return end
     WFC.Arena.enabled = true
-    hud:SetPoint(TurtlePvPConfig.arenaFramePoint or "CENTER", UIParent, TurtlePvPConfig.arenaFramePoint or "CENTER", TurtlePvPConfig.arenaFrameX or 0, TurtlePvPConfig.arenaFrameY or 0)
+    
+    local pt = TurtlePvPConfig.arenaFramePoint or "CENTER"
+    local x = TurtlePvPConfig.arenaFrameX or 0
+    local y = TurtlePvPConfig.arenaFrameY or 0
+    hud:ClearAllPoints()
+    hud:SetPoint(pt, UIParent, pt, x, y)
+    
     UpdateArenaLock()
     hud:Show()
     frame:RegisterEvent("UNIT_DIED")
@@ -200,8 +200,6 @@ function WFC.Arena:AddEnemy(guid, name)
 end
 
 function WFC.Arena:Scan()
-    local myFaction = UnitFactionGroup("player")
-    
     -- Active Scanner via GetUnitGUID
     local tokens = {"target", "mouseover", "targettarget"}
     for _, t in ipairs(tokens) do
