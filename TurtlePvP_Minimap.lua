@@ -1,7 +1,7 @@
 --[[
 TurtlePvP_Minimap.lua
-Minimap button + tabbed settings panel for TurtlePvP
-Styled after TurtleHonorSpyEnhanced overlay.lua (dark tooltip backdrop, gold title)
+Minimap button, tabbed settings panel, and custom right-click context menu.
+Completely rewritten for Vanilla 1.12 compatibility!
 --]]
 
 WFC.Minimap = {}
@@ -9,12 +9,10 @@ WFC.Minimap = {}
 -- ========================
 -- Panel style constants
 -- ========================
-local PANEL_W, PANEL_H = 310, 220
+local PANEL_W, PANEL_H = 310, 240
 local DARK_BG = { 0, 0, 0, 0.88 }
 local BORDER_COLOR = { 0.4, 0.4, 0.4, 1 }
 local GOLD = "|cffffd700"
-local TAB_ACTIVE_COLOR = { 1, 0.82, 0, 1 }    -- gold
-local TAB_INACTIVE_COLOR = { 0.6, 0.6, 0.6, 1 } -- grey
 
 -- ========================
 -- Minimap Button
@@ -25,7 +23,6 @@ mmButton:SetHeight(31)
 mmButton:SetFrameStrata("MEDIUM")
 mmButton:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
--- Red circle backdrop
 local mmBg = mmButton:CreateTexture(nil, "BACKGROUND")
 mmBg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
 mmBg:SetWidth(22)
@@ -33,21 +30,18 @@ mmBg:SetHeight(22)
 mmBg:SetPoint("CENTER")
 mmBg:SetVertexColor(0.65, 0.07, 0.07, 1)
 
--- Swords icon on top
 local mmIcon = mmButton:CreateTexture(nil, "ARTWORK")
 mmIcon:SetTexture("Interface\\Icons\\Ability_DualWield")
 mmIcon:SetWidth(20)
 mmIcon:SetHeight(20)
 mmIcon:SetPoint("CENTER")
 
--- Circular border
 local mmBorder = mmButton:CreateTexture(nil, "OVERLAY")
 mmBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
 mmBorder:SetWidth(53)
 mmBorder:SetHeight(53)
 mmBorder:SetPoint("CENTER")
 
--- Tooltip
 mmButton:SetScript("OnEnter", function()
     GameTooltip:SetOwner(this, "ANCHOR_LEFT")
     GameTooltip:SetText(GOLD.."TurtlePvP|r")
@@ -57,64 +51,7 @@ mmButton:SetScript("OnEnter", function()
 end)
 mmButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
--- Right-click context menu
-local menuItems = {
-    { text = GOLD.."TurtlePvP|r",                notCheckable = 1, isTitle = 1 },
-    { text = "Toggle WSG Caller",     notCheckable = 1,
-        func = function()
-            TurtlePvPConfig.wsgEnabled = not TurtlePvPConfig.wsgEnabled
-            WFC:CheckZone(true)
-            WFC:Print("WSG Caller " .. (TurtlePvPConfig.wsgEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
-        end },
-    { text = "Toggle Arena HUD",      notCheckable = 1,
-        func = function()
-            TurtlePvPConfig.arenaEnabled = not TurtlePvPConfig.arenaEnabled
-            WFC:CheckZone(true)
-            WFC:Print("Arena HUD " .. (TurtlePvPConfig.arenaEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
-        end },
-    { text = "Reset Frame Positions", notCheckable = 1,
-        func = function()
-            TurtlePvPConfig.framePoint = "TOP"
-            TurtlePvPConfig.frameX = 0
-            TurtlePvPConfig.frameY = -150
-            TurtlePvPConfig.arenaFramePoint = "CENTER"
-            TurtlePvPConfig.arenaFrameX = 0
-            TurtlePvPConfig.arenaFrameY = 0
-            WFC:Print("Frame positions reset.")
-        end },
-    { text = "Open Settings",         notCheckable = 1,
-        func = function() WFC.Minimap:TogglePanel() end },
-}
-local contextMenu = CreateFrame("Frame", "TurtlePvPContextMenu", UIParent, "UIDropDownMenuTemplate")
-contextMenu.displayMode = "MENU"
-contextMenu.initialize = function()
-    for _, item in ipairs(menuItems) do
-        local info = {}
-        info.text = item.text
-        info.notCheckable = item.notCheckable
-        info.isTitle = item.isTitle
-        info.func = item.func
-        UIDropDownMenu_AddButton(info)
-    end
-end
-
-mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-mmButton:SetScript("OnClick", function()
-    if arg1 == "LeftButton" then
-        WFC.Minimap:TogglePanel()
-    else
-        ToggleDropDownMenu(1, nil, contextMenu, "cursor", 0, 0)
-    end
-end)
-
--- Draggable position around minimap
-local function UpdateMinimapPos()
-    local pos = (TurtlePvPConfig and TurtlePvPConfig.minimapPos) or 45
-    local angle = math.rad(pos)
-    local r = 80
-    mmButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle)*r, math.sin(angle)*r)
-end
-UpdateMinimapPos()
+-- Initial position update happens later in VARIABLES_LOADED
 
 mmButton:RegisterForDrag("LeftButton")
 mmButton:SetMovable(true)
@@ -126,12 +63,119 @@ dragF:SetScript("OnUpdate", function()
     if not mmButton.dragging then return end
     local mx, my = Minimap:GetCenter()
     local px, py = GetCursorPosition()
-    local s = UIParent:GetEffectiveScale()
+    local s = mmButton:GetEffectiveScale()
     if not s or s == 0 then s = 1 end
     px, py = px/s, py/s
     if not TurtlePvPConfig then TurtlePvPConfig = {} end
     TurtlePvPConfig.minimapPos = math.deg(math.atan2(py - my, px - mx))
-    UpdateMinimapPos()
+    WFC.Minimap:UpdateMinimapPos()
+end)
+
+function WFC.Minimap:UpdateMinimapPos()
+    local pos = (TurtlePvPConfig and TurtlePvPConfig.minimapPos) or 45
+    local angle = math.rad(pos)
+    local r = 80
+    mmButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle)*r, math.sin(angle)*r)
+end
+
+-- ========================
+-- Custom Context Menu
+-- ========================
+-- Instead of UIDropDownMenu, we use a simple floating frame with buttons
+local contextMenu = CreateFrame("Frame", "TurtlePvPContextMenu", UIParent)
+contextMenu:SetWidth(180)
+contextMenu:SetHeight(120)
+contextMenu:SetFrameStrata("TOOLTIP")
+contextMenu:SetBackdrop({
+    bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+    tile = true, tileSize = 16, edgeSize = 16,
+    insets = { left = 4, right = 4, top = 4, bottom = 4 },
+})
+contextMenu:SetBackdropColor(0, 0, 0, 1)
+contextMenu:Hide()
+
+local menuItems = {
+    { text = GOLD.."TurtlePvP Options|r", isTitle = true },
+    { text = "Toggle WSG Caller", func = function()
+        TurtlePvPConfig.wsgEnabled = not TurtlePvPConfig.wsgEnabled
+        WFC:CheckZone(true)
+        WFC:Print("WSG Caller " .. (TurtlePvPConfig.wsgEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+    end },
+    { text = "Toggle Arena HUD", func = function()
+        TurtlePvPConfig.arenaEnabled = not TurtlePvPConfig.arenaEnabled
+        WFC:CheckZone(true)
+        WFC:Print("Arena HUD " .. (TurtlePvPConfig.arenaEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+    end },
+    { text = "Reset Frame Positions", func = function()
+        TurtlePvPConfig.framePoint = "TOP"
+        TurtlePvPConfig.frameX = 0
+        TurtlePvPConfig.frameY = -150
+        TurtlePvPConfig.arenaFramePoint = "CENTER"
+        TurtlePvPConfig.arenaFrameX = 0
+        TurtlePvPConfig.arenaFrameY = 0
+        WFC:Print("Frame positions reset.")
+    end },
+    { text = "Open Settings Panel", func = function() WFC.Minimap:TogglePanel() end },
+    { text = "Close Menu", func = function() end }
+}
+
+contextMenu.buttons = {}
+local btnY = -8
+for i, item in ipairs(menuItems) do
+    local b = CreateFrame("Button", nil, contextMenu)
+    b:SetWidth(160)
+    b:SetHeight(16)
+    b:SetPoint("TOP", 0, btnY)
+    
+    local t = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    t:SetPoint("LEFT", 4, 0)
+    if item.isTitle then
+        t:SetText(item.text)
+    else
+        t:SetText("|cffffffff" .. item.text .. "|r")
+        b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
+        b:SetScript("OnClick", function()
+            if item.func then item.func() end
+            contextMenu:Hide()
+        end)
+    end
+    btnY = btnY - 18
+    table.insert(contextMenu.buttons, b)
+end
+contextMenu:SetHeight(math.abs(btnY) + 8)
+
+-- Auto-hide context menu when you click outside it
+local function ProcessClickOutside()
+    if contextMenu:IsVisible() and not MouseIsOver(contextMenu) and not MouseIsOver(mmButton) then
+        contextMenu:Hide()
+    end
+end
+-- Easiest way in 1.12 to hide a custom floating menu when clicking away
+local worldClickSync = CreateFrame("Frame")
+worldClickSync:SetScript("OnUpdate", function()
+    if contextMenu:IsVisible() and IsMouseButtonDown("LeftButton") then
+        ProcessClickOutside()
+    end
+end)
+
+mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+mmButton:SetScript("OnClick", function()
+    if arg1 == "LeftButton" then
+        contextMenu:Hide()
+        WFC.Minimap:TogglePanel()
+    else
+        if contextMenu:IsVisible() then
+            contextMenu:Hide()
+        else
+            -- Show context menu next to mouse
+            local x, y = GetCursorPosition()
+            local s = UIParent:GetEffectiveScale()
+            x, y = x/s, y/s
+            contextMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
+            contextMenu:Show()
+        end
+    end
 end)
 
 -- ========================
@@ -157,12 +201,12 @@ end
 -- ========================
 local function MakeCheck(parent, label, x, y, onClickFn)
     local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
-    cb:SetWidth(20)
-    cb:SetHeight(20)
+    cb:SetWidth(24)
+    cb:SetHeight(24)
     cb:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
-    local txt = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    txt:SetPoint("LEFT", cb, "RIGHT", 4, 0)
-    txt:SetText(label)
+    local txt = cb:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
+    txt:SetPoint("LEFT", cb, "RIGHT", 4, 1)
+    txt:SetText("|cffffffff" .. label .. "|r")
     cb:SetScript("OnClick", onClickFn)
     return cb
 end
@@ -181,49 +225,39 @@ panel:SetScript("OnDragStart", function() this:StartMoving() end)
 panel:SetScript("OnDragStop",  function() this:StopMovingOrSizing() end)
 panel:Hide()
 
--- Gold title
 local titleText = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
-titleText:SetPoint("TOPLEFT", 14, -10)
+titleText:SetPoint("TOPLEFT", 14, -12)
 titleText:SetText(GOLD.."TurtlePvP|r Settings")
 
--- Version
 local verText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-verText:SetPoint("TOPRIGHT", -36, -12)
+verText:SetPoint("TOPRIGHT", -36, -14)
 verText:SetText("|cff888888v3.1|r")
 
--- Close button
 local closeBtn = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-closeBtn:SetWidth(22)
-closeBtn:SetHeight(22)
-closeBtn:SetPoint("TOPRIGHT", -2, -2)
+closeBtn:SetWidth(24)
+closeBtn:SetHeight(24)
+closeBtn:SetPoint("TOPRIGHT", -4, -4)
 
--- Divider line under title
 local divider = panel:CreateTexture(nil, "ARTWORK")
 divider:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
 divider:SetHeight(1)
-divider:SetPoint("TOPLEFT", 8, -28)
-divider:SetPoint("TOPRIGHT", -8, -28)
+divider:SetPoint("TOPLEFT", 8, -32)
+divider:SetPoint("TOPRIGHT", -8, -32)
 divider:SetVertexColor(0.4, 0.4, 0.4, 0.8)
 
 -- ========================
--- Tab buttons (custom styled)
+-- Tab Logic using Standard Panel Buttons
 -- ========================
 local tabs = {}
 local tabPages = {}
+
 local function SelectTab(idx)
     for i, t in ipairs(tabs) do
-        local f = t.fs
         if i == idx then
-            if f then 
-                f:SetTextColor(TAB_ACTIVE_COLOR[1], TAB_ACTIVE_COLOR[2], TAB_ACTIVE_COLOR[3]) 
-            end
-            t.underline:Show()
+            t:LockHighlight()
             if tabPages[i] then tabPages[i]:Show() end
         else
-            if f then 
-                f:SetTextColor(TAB_INACTIVE_COLOR[1], TAB_INACTIVE_COLOR[2], TAB_INACTIVE_COLOR[3]) 
-            end
-            t.underline:Hide()
+            t:UnlockHighlight()
             if tabPages[i] then tabPages[i]:Hide() end
         end
     end
@@ -232,126 +266,129 @@ end
 local TAB_LABELS = { "WSG Caller", "Arena HUD", "EFC Report" }
 local tabStart = 12
 for i, label in ipairs(TAB_LABELS) do
-    local tb = CreateFrame("Button", nil, panel)
-    tb:SetHeight(18)
-    tb:SetWidth(80)
-    tb:SetPoint("TOPLEFT", panel, "TOPLEFT", tabStart + (i-1)*86, -32)
-    local fs = tb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    fs:SetAllPoints()
-    fs:SetText(label)
-    fs:SetJustifyH("CENTER")
-    tb.fs = fs
-    -- underline indicator
-    local ul = tb:CreateTexture(nil, "ARTWORK")
-    ul:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    ul:SetHeight(2)
-    ul:SetPoint("BOTTOMLEFT", tb, "BOTTOMLEFT", 2, 0)
-    ul:SetPoint("BOTTOMRIGHT", tb, "BOTTOMRIGHT", -2, 0)
-    ul:SetVertexColor(TAB_ACTIVE_COLOR[1], TAB_ACTIVE_COLOR[2], TAB_ACTIVE_COLOR[3], 1)
-    ul:Hide()
-    tb.underline = ul
+    local tb = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    tb:SetHeight(22)
+    tb:SetWidth(86)
+    tb:SetPoint("TOPLEFT", panel, "TOPLEFT", tabStart + (i-1)*90, -40)
+    tb:SetText(label)
     local idx = i
     tb:SetScript("OnClick", function() SelectTab(idx) end)
     table.insert(tabs, tb)
 end
 
--- Thin horizontal separator under tabs
 local tabDiv = panel:CreateTexture(nil, "ARTWORK")
 tabDiv:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
 tabDiv:SetHeight(1)
-tabDiv:SetPoint("TOPLEFT", 8, -52)
-tabDiv:SetPoint("TOPRIGHT", -8, -52)
+tabDiv:SetPoint("TOPLEFT", 10, -66)
+tabDiv:SetPoint("TOPRIGHT", -10, -66)
 tabDiv:SetVertexColor(0.35, 0.35, 0.35, 1)
 
 -- ========================
 -- TAB 1: WSG Caller
 -- ========================
 local wsgPage = CreateFrame("Frame", nil, panel)
-wsgPage:SetPoint("TOPLEFT", 8, -56)
-wsgPage:SetPoint("BOTTOMRIGHT", -8, 8)
+wsgPage:SetPoint("TOPLEFT", 10, -70)
+wsgPage:SetPoint("BOTTOMRIGHT", -10, 10)
+wsgPage:Hide()
 table.insert(tabPages, wsgPage)
 
-local chkWSG = MakeCheck(wsgPage, "Enable WSG Flag Caller", 8, -8, function()
-    TurtlePvPConfig.wsgEnabled = this:GetChecked()
+local chkWSG = MakeCheck(wsgPage, "Enable WSG Flag Caller Tracking", 4, -4, function()
+    TurtlePvPConfig.wsgEnabled = this:GetChecked() and true or false
     WFC:CheckZone(true)
 end)
 
-local chkHP = MakeCheck(wsgPage, "Enemy HP Callouts in /bg", 24, -36, function()
-    TurtlePvPConfig.hpCallouts = this:GetChecked()
+local chkHP = MakeCheck(wsgPage, "Enemy Phase HP Callouts in /bg", 20, -32, function()
+    TurtlePvPConfig.hpCallouts = this:GetChecked() and true or false
 end)
 
-local chkFrame = MakeCheck(wsgPage, "Show Flag Carrier HUD", 24, -60, function()
-    TurtlePvPConfig.showFrame = this:GetChecked()
-    if WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
+local chkFrame = MakeCheck(wsgPage, "Show Flag Tracking HUD", 20, -60, function()
+    TurtlePvPConfig.showFrame = this:GetChecked() and true or false
+    if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
 end)
 
 local threshLabel = wsgPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-threshLabel:SetPoint("TOPLEFT", 24, -88)
-threshLabel:SetText("|cffaaaaaa HP Threshold callouts:|r  75 / 50 / 25 %")
+threshLabel:SetPoint("TOPLEFT", 28, -88)
+threshLabel:SetText("|cffaaaaaa HP Thresholds:|r 75% / 50% / 25%")
 
 -- ========================
 -- TAB 2: Arena HUD
 -- ========================
 local arenaPage = CreateFrame("Frame", nil, panel)
-arenaPage:SetPoint("TOPLEFT", 8, -56)
-arenaPage:SetPoint("BOTTOMRIGHT", -8, 8)
+arenaPage:SetPoint("TOPLEFT", 10, -70)
+arenaPage:SetPoint("BOTTOMRIGHT", -10, 10)
+arenaPage:Hide()
 table.insert(tabPages, arenaPage)
 
-local chkArena = MakeCheck(arenaPage, "Enable Arena Enemy HUD", 8, -8, function()
-    TurtlePvPConfig.arenaEnabled = this:GetChecked()
+local chkArena = MakeCheck(arenaPage, "Enable Arena Enemy Tracker HUD", 4, -4, function()
+    TurtlePvPConfig.arenaEnabled = this:GetChecked() and true or false
     WFC:CheckZone(true)
 end)
 
-local chkDist = MakeCheck(arenaPage, "Show Distance  (requires UnitXP)", 24, -36, function()
-    TurtlePvPConfig.arenaDistance = this:GetChecked()
+local chkDist = MakeCheck(arenaPage, "Engine: Show HUD Distance (UnitXP)", 20, -32, function()
+    TurtlePvPConfig.arenaDistance = this:GetChecked() and true or false
 end)
 
-local chkTrinkets = MakeCheck(arenaPage, "Track Trinkets / Racials  (requires Nampower)", 24, -60, function()
-    TurtlePvPConfig.arenaTrinkets = this:GetChecked()
+local chkTrinkets = MakeCheck(arenaPage, "Engine: Track Trinkets/Racials (Nampower)", 20, -60, function()
+    TurtlePvPConfig.arenaTrinkets = this:GetChecked() and true or false
 end)
 
 local arenaNote = arenaPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-arenaNote:SetPoint("TOPLEFT", 24, -88)
-arenaNote:SetText("|cff888888Auto-activates in TurtleWoW arena zones.\nUse /tpvp force arena to test.|r")
+arenaNote:SetPoint("TOPLEFT", 26, -92)
+arenaNote:SetText("|cffaaaaaaAuto-activates in PvP Arena zones.\nTest anywhere via:  /tpvp force arena|r")
 
 -- ========================
--- TAB 3: EFC Report (placeholder — populated by TurtlePvP_EFCReport.lua)
+-- TAB 3: EFC Report (Populated by EFCReport module)
 -- ========================
 local efcPage = CreateFrame("Frame", nil, panel)
-efcPage:SetPoint("TOPLEFT", 8, -56)
-efcPage:SetPoint("BOTTOMRIGHT", -8, 8)
+efcPage:SetPoint("TOPLEFT", 10, -70)
+efcPage:SetPoint("BOTTOMRIGHT", -10, 10)
+efcPage:Hide()
 table.insert(tabPages, efcPage)
 
 local efcNote = efcPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-efcNote:SetPoint("TOPLEFT", 8, -8)
-efcNote:SetText(GOLD.."EFC Location Reporter|r\n|cffaaaaaaOnly active in Warsong Gulch.\nClick a location button to announce\nthe enemy flag carrier's position in /bg.|r")
+efcNote:SetPoint("TOPLEFT", 4, -8)
+efcNote:SetText(GOLD.."EFC Map Reporter Panel|r\n|cffaaaaaaOnly functions inside Warsong Gulch.\nClick a location button to announce the Enemy\nFlag Carrier's position to your team in /bg.|r")
 
 local efcOpenBtn = CreateFrame("Button", nil, efcPage, "UIPanelButtonTemplate")
-efcOpenBtn:SetWidth(130)
-efcOpenBtn:SetHeight(22)
-efcOpenBtn:SetPoint("TOPLEFT", 8, -80)
-efcOpenBtn:SetText("Open EFC Panel")
+efcOpenBtn:SetWidth(140)
+efcOpenBtn:SetHeight(24)
+efcOpenBtn:SetPoint("TOPLEFT", 4, -80)
+efcOpenBtn:SetText("Toggle Map Window")
 efcOpenBtn:SetScript("OnClick", function()
     if WFC.EFCReport and WFC.EFCReport.Toggle then
         WFC.EFCReport:Toggle()
     end
 end)
 
-WFC.Minimap.efcPage = efcPage  -- let EFCReport module inject more controls here
+WFC.Minimap.efcPage = efcPage
 
 -- ========================
--- Sync checkboxes on open
+-- Event Handlers
 -- ========================
 panel:SetScript("OnShow", function()
+    if not TurtlePvPConfig then return end
     chkWSG:SetChecked(TurtlePvPConfig.wsgEnabled)
     chkHP:SetChecked(TurtlePvPConfig.hpCallouts)
     chkFrame:SetChecked(TurtlePvPConfig.showFrame)
     chkArena:SetChecked(TurtlePvPConfig.arenaEnabled)
     chkDist:SetChecked(TurtlePvPConfig.arenaDistance)
     chkTrinkets:SetChecked(TurtlePvPConfig.arenaTrinkets)
+    -- Initialize to first tab if none selected visually yet
     SelectTab(1)
 end)
 
 function WFC.Minimap:TogglePanel()
-    if panel:IsVisible() then panel:Hide() else panel:Show() end
+    if panel:IsVisible() then 
+        panel:Hide() 
+    else 
+        panel:Show() 
+    end
 end
+
+-- Safely trigger setup logic only once variables are fully loaded
+local loadFrame = CreateFrame("Frame")
+loadFrame:RegisterEvent("VARIABLES_LOADED")
+loadFrame:SetScript("OnEvent", function()
+    if not TurtlePvPConfig then TurtlePvPConfig = {} end
+    WFC.Minimap:UpdateMinimapPos()
+end)
