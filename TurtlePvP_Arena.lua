@@ -5,15 +5,8 @@ WFC.Arena = {
 }
 
 WFC.Arena.TRINKET_SPELLS = {
-    [13750] = "PvP Trinket (A)",
-    [23273] = "PvP Trinket (H)",
-    [7744]  = "Will of the Forsaken",
-    [20594] = "Stoneform",
-    [20589] = "Escape Artist",
-    [20572] = "Blood Fury",
-    [26297] = "Berserking",
-    [20549] = "War Stomp",
-    [20600] = "Perception"
+    [13750] = "Interface\\Icons\\INV_Jewelry_TrinketPVP_01",
+    [23273] = "Interface\\Icons\\INV_Jewelry_TrinketPVP_02",
 }
 
 local MAX_ENEMIES = 8
@@ -60,12 +53,8 @@ end)
 local function UpdateArenaLock()
     if TurtlePvPConfig.arenaLocked then
         hud.unlockBg:Hide()
-        hud:EnableMouse(false)
-        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("") end
     else
         hud.unlockBg:Show()
-        hud:EnableMouse(true)
-        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("LeftButton") end
     end
 end
 
@@ -105,11 +94,13 @@ for i=1, MAX_ENEMIES do
     distText:SetText("--")
     row.distText = distText
 
-    local trinketIcon = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    trinketIcon:SetPoint("LEFT", nameText, "RIGHT", 5, 0)
-    trinketIcon:SetText("")
+    local trinketIcon = row:CreateTexture(nil, "OVERLAY")
+    trinketIcon:SetWidth(14)
+    trinketIcon:SetHeight(14)
+    trinketIcon:SetPoint("LEFT", nameText, "RIGHT", 4, 0)
     row.trinketIcon = trinketIcon
     
+    row:RegisterForDrag("LeftButton")
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnClick", function()
         if arg1 == "LeftButton" and not TurtlePvPConfig.arenaLocked then
@@ -134,13 +125,13 @@ for i=1, MAX_ENEMIES do
 end
 
 function WFC.Arena:Enable()
+    if WFC.Arena.enabled then return end
     WFC.Arena.enabled = true
     hud:SetPoint(TurtlePvPConfig.arenaFramePoint or "CENTER", UIParent, TurtlePvPConfig.arenaFramePoint or "CENTER", TurtlePvPConfig.arenaFrameX or 0, TurtlePvPConfig.arenaFrameY or 0)
     UpdateArenaLock()
     hud:Show()
     frame:RegisterEvent("UNIT_DIED")
     frame:RegisterEvent("SPELL_START_OTHER")
-    frame:RegisterEvent("CHAT_MSG_SPELL_PERIODIC_HOSTILEPLAYER_DAMAGE")
     -- Arena Chat Hooks
     frame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
     frame:RegisterEvent("CHAT_MSG_MONSTER_EMOTE")
@@ -179,10 +170,17 @@ end
 function WFC.Arena:AddEnemy(guid, name)
     if not guid or not name or name == "Unknown" then return end
     
-    -- Deduplication logic fix: check correctly by indexing
+    -- Deduplication logic fix: check correctly by indexing and array enforce
     if not WFC.Arena.enemies[name] then
         WFC.Arena.enemies[name] = { guid = guid }
-        table.insert(WFC.Arena.orderedNames, name)
+        -- Bulletproof array check to explicitly stop screenshot ghost clones
+        local found = false
+        for _, n in ipairs(WFC.Arena.orderedNames) do
+            if n == name then found = true; break; end
+        end
+        if not found then
+            table.insert(WFC.Arena.orderedNames, name)
+        end
     else
         -- If they already exist, just forcefully update their GUID in case it was bad previously
         WFC.Arena.enemies[name].guid = guid
@@ -265,12 +263,12 @@ frame:SetScript("OnEvent", function(...)
                     WFC.Arena:AddEnemy(casterGuid, casterName)
                 end
                 
-                -- Detect Trinkets
+                -- Detect PvP Trinkets specifically
                 if TurtlePvPConfig.arenaTrinkets and WFC.Arena.TRINKET_SPELLS[spellId] and WFC.Arena.enemies[casterName] then
-                    local tName = WFC.Arena.TRINKET_SPELLS[spellId]
+                    local texPath = WFC.Arena.TRINKET_SPELLS[spellId]
                     WFC.Arena.enemies[casterName].lastTrinketTime = GetTime()
-                    WFC.Arena.enemies[casterName].trinketSpell = tName
-                    WFC:Print("|cffff0000[Arena]|r " .. casterName .. " used " .. tName .. "!")
+                    WFC.Arena.enemies[casterName].trinketSpell = texPath
+                    WFC:Print("|cffff0000[Arena]|r " .. casterName .. " used their PvP Trinket!")
                 end
             end
         end
@@ -340,11 +338,12 @@ function WFC.Arena:UpdateHUD()
             local cColor = classToken and WFC:GetClassColor(classToken) or "FFFFFF"
             row.nameText:SetText("|cff" .. cColor .. name .. "|r")
             
-            -- Trinket CD (Assuming 2 min CD for standard PvP trinket, just show [🔔] for 10s)
-            if eData.lastTrinketTime and (GetTime() - eData.lastTrinketTime) < 10 then
-                row.trinketIcon:SetText("|cffffff00[🔔]|r")
+            -- Trinket CD (Assuming 2 min CD for standard PvP trinket, keep icon for 120s)
+            if eData.lastTrinketTime and (GetTime() - eData.lastTrinketTime) < 120 then
+                row.trinketIcon:SetTexture(eData.trinketSpell)
+                row.trinketIcon:Show()
             else
-                row.trinketIcon:SetText("")
+                row.trinketIcon:Hide()
             end
 
             row:Show()
