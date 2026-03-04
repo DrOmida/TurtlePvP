@@ -31,20 +31,34 @@ hud:SetBackdrop({
 hud:SetBackdropColor(0, 0, 0, 0.88)
 hud:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
 
-local title = hud:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-title:SetPoint("TOP", hud, "TOP", 0, -8)
-title:SetText("|cffffd700Arena Enemies|r")
-
 local unlockBg = hud:CreateTexture(nil, "BACKGROUND")
-unlockBg:SetAllPoints()
+unlockBg:SetPoint("TOPLEFT", hud, "TOPLEFT", 2, -2)
+unlockBg:SetPoint("TOPRIGHT", hud, "TOPRIGHT", -2, -2)
+unlockBg:SetHeight(20)
 unlockBg:SetTexture(0, 1, 0, 0.2)
 hud.unlockBg = unlockBg
 
-hud:RegisterForDrag("LeftButton")
-hud:SetScript("OnDragStart", function() if not TurtlePvPConfig.arenaLocked then this:StartMoving() end end)
-hud:SetScript("OnDragStop", function()
-    this:StopMovingOrSizing()
-    local point, _, relativePoint, xOfs, yOfs = this:GetPoint()
+-- Create a dedicated drag handle for the title area
+local dragHandle = CreateFrame("Button", nil, hud)
+dragHandle:SetPoint("TOPLEFT", hud, "TOPLEFT", 0, 0)
+dragHandle:SetPoint("TOPRIGHT", hud, "TOPRIGHT", 0, 0)
+dragHandle:SetHeight(24)
+dragHandle:RegisterForDrag("LeftButton")
+dragHandle:RegisterForClicks("RightButtonUp")
+
+local title = dragHandle:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+title:SetPoint("CENTER", dragHandle, "CENTER", 0, 0)
+title:SetText("|cffffd700Arena Enemies|r")
+
+dragHandle:SetScript("OnDragStart", function() 
+    if not TurtlePvPConfig.arenaLocked then 
+        hud:StartMoving() 
+    end 
+end)
+
+dragHandle:SetScript("OnDragStop", function()
+    hud:StopMovingOrSizing()
+    local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
     TurtlePvPConfig.arenaFramePoint = point
     TurtlePvPConfig.arenaFrameX = xOfs
     TurtlePvPConfig.arenaFrameY = yOfs
@@ -53,14 +67,22 @@ end)
 local function UpdateArenaLock()
     if TurtlePvPConfig.arenaLocked then
         hud.unlockBg:Hide()
-        hud:EnableMouse(false)
-        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("") end
     else
         hud.unlockBg:Show()
-        hud:EnableMouse(true)
-        for i=1, MAX_ENEMIES do hud.rows[i]:RegisterForDrag("LeftButton") end
     end
 end
+
+dragHandle:SetScript("OnClick", function()
+    if arg1 == "RightButton" then
+        TurtlePvPConfig.arenaLocked = not TurtlePvPConfig.arenaLocked
+        UpdateArenaLock()
+        if TurtlePvPConfig.arenaLocked then
+            WFC:Print("Arena HUD Locked.")
+        else
+            WFC:Print("Arena HUD Unlocked. You can now drag the title bar.")
+        end
+    end
+end)
 
 for i=1, MAX_ENEMIES do
     local row = CreateFrame("Button", nil, hud)
@@ -104,24 +126,11 @@ for i=1, MAX_ENEMIES do
     trinketIcon:SetPoint("LEFT", nameText, "RIGHT", 4, 0)
     row.trinketIcon = trinketIcon
     
-    row:RegisterForDrag("LeftButton")
-    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    row:RegisterForClicks("LeftButtonUp")
     row:SetScript("OnClick", function()
-        if arg1 == "LeftButton" and not TurtlePvPConfig.arenaLocked then
+        if arg1 == "LeftButton" then
             if row.targetName then TargetByName(row.targetName, true) end
-        elseif arg1 == "RightButton" then
-            TurtlePvPConfig.arenaLocked = not TurtlePvPConfig.arenaLocked
-            UpdateArenaLock()
         end
-    end)
-    
-    row:SetScript("OnDragStart", function() if not TurtlePvPConfig.arenaLocked then hud:StartMoving() end end)
-    row:SetScript("OnDragStop", function()
-        hud:StopMovingOrSizing()
-        local point, _, relativePoint, xOfs, yOfs = hud:GetPoint()
-        TurtlePvPConfig.arenaFramePoint = point
-        TurtlePvPConfig.arenaFrameX = xOfs
-        TurtlePvPConfig.arenaFrameY = yOfs
     end)
     
     row:Hide()
@@ -168,7 +177,6 @@ end
 
 function WFC.Arena:Reset()
     WFC.Arena.enemies = {}
-    WFC.Arena.orderedNames = {}
     
     for i=1, MAX_ENEMIES do
         hud.rows[i]:Hide()
@@ -180,7 +188,7 @@ function WFC.Arena:AddEnemy(guid, name)
     if not guid or not name or name == "Unknown" then return end
     
     if not WFC.Arena.enemies[name] then
-        WFC.Arena.enemies[name] = { guid = guid }
+        WFC.Arena.enemies[name] = { guid = guid, lastTrinketTime = 0 }
     else
         WFC.Arena.enemies[name].guid = guid
     end
@@ -203,22 +211,6 @@ function WFC.Arena:Scan()
             if pName and pGuid then WFC.Arena:AddEnemy(pGuid, pName) end
         end
     end
-    
-    -- Nameplate Scanner
-    local children = { WorldFrame:GetChildren() }
-    for _, child in ipairs(children) do
-        if child.GetName and child:GetName(1) then
-            local guid = child:GetName(1)
-            -- Only Nampower extends GetName(1) to return GUID
-            if type(guid) == "string" and string.sub(guid, 1, 2) == "0x" then
-                local pName = UnitName(guid)
-                local isEnemy = UnitCanAttack("player", guid) or (UnitFactionGroup(guid) and UnitFactionGroup(guid) ~= myFaction)
-                if pName and isEnemy then
-                    WFC.Arena:AddEnemy(guid, pName)
-                end
-            end
-        end
-    end
 end
 
 frame:SetScript("OnEvent", function(...)
@@ -229,13 +221,6 @@ frame:SetScript("OnEvent", function(...)
             local deadName = WFC.Tracker.guidToName[arg1] or UnitName(arg1)
             if deadName and WFC.Arena.enemies[deadName] then
                 WFC.Arena.enemies[deadName] = nil
-                -- Remove from order
-                for i, n in ipairs(WFC.Arena.orderedNames) do
-                    if n == deadName then
-                        table.remove(WFC.Arena.orderedNames, i)
-                        break
-                    end
-                end
                 WFC.Arena:UpdateHUD()
             end
         end
@@ -267,7 +252,7 @@ frame:SetScript("OnEvent", function(...)
 end)
 
 function WFC.Arena:UpdateHUD()
-    if not TurtlePvPConfig.showFrame then 
+    if not TurtlePvPConfig.arenaEnabled then 
         hud:Hide()
         return
     else
@@ -287,6 +272,18 @@ function WFC.Arena:UpdateHUD()
         if eData then
             local row = hud.rows[rowIdx]
             row.targetName = name
+            
+            -- Detect active PvP Trinket buff directly from Unit buffs if targeted
+            if TurtlePvPConfig.arenaTrinkets and UnitName("target") == name then
+                for i = 1, 32 do
+                    local tex = UnitBuff("target", i)
+                    if not tex then break end
+                    if string.find(string.lower(tex), "inv_jewelry_trinketpvp") then
+                        eData.lastTrinketTime = GetTime()
+                        eData.trinketSpell = tex
+                    end
+                end
+            end
             
             -- HP and Distance
             local hp, hpMax = 0, 100
@@ -334,8 +331,8 @@ function WFC.Arena:UpdateHUD()
             row.nameText:SetText("|cff" .. cColor .. name .. "|r")
             
             -- Trinket CD (Assuming 2 min CD for standard PvP trinket, keep icon for 120s)
-            if eData.lastTrinketTime and (GetTime() - eData.lastTrinketTime) < 120 then
-                row.trinketIcon:SetTexture(eData.trinketSpell)
+            if eData.lastTrinketTime and eData.lastTrinketTime > 0 and (GetTime() - eData.lastTrinketTime) < 120 then
+                row.trinketIcon:SetTexture(eData.trinketSpell or "Interface\\Icons\\INV_Jewelry_TrinketPVP_02")
                 row.trinketIcon:Show()
             else
                 row.trinketIcon:Hide()
