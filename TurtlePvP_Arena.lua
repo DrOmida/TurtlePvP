@@ -638,6 +638,28 @@ end
 
 local eventFrame = CreateFrame("Frame")
 
+local function TriggerPullTimer()
+    local pullKey = hash_SlashCmdList and (hash_SlashCmdList["/PULL"] or hash_SlashCmdList["/pull"])
+    if pullKey and SlashCmdList and SlashCmdList[pullKey] then
+        SlashCmdList[pullKey]("15")
+        WFC:Print("|cffffff00[Arena]|r Triggered /pull 15.")
+        return
+    end
+    
+    if SlashCmdList and SlashCmdList["DEADLYBOSSMODS"] then
+        SlashCmdList["DEADLYBOSSMODS"]("pull 15")
+        WFC:Print("|cffffff00[Arena]|r Triggered DBM pull 15.")
+    elseif SlashCmdList and SlashCmdList["DBM"] then
+        SlashCmdList["DBM"]("pull 15")
+        WFC:Print("|cffffff00[Arena]|r Triggered DBM pull 15.")
+    elseif SlashCmdList and SlashCmdList["BIGWIGS"] then
+        SlashCmdList["BIGWIGS"]("pull 15")
+        WFC:Print("|cffffff00[Arena]|r Triggered BigWigs pull 15.")
+    else
+        WFC:Print("|cffff0000[Arena]|r Note: No /pull handler found! Install DBM or BigWigs.")
+    end
+end
+
 eventFrame:SetScript("OnEvent", function()
     if not WFC.Arena.enabled then return end
 
@@ -661,13 +683,7 @@ eventFrame:SetScript("OnEvent", function()
         if not arg1 then return end
         local lower = string.lower(arg1)
         if string.find(lower, "fifteen seconds") then
-            -- Trigger actual /pull 15 command instead of party chat text
-            local editBox = ChatFrame1EditBox
-            if editBox then
-                editBox:SetText("/pull 15")
-                ChatEdit_SendText(editBox)
-            end
-            WFC:Print("|cffffff00[Arena]|r Executed /pull 15.")
+            TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
@@ -679,13 +695,7 @@ eventFrame:SetScript("OnEvent", function()
         if not arg1 then return end
         local lower = string.lower(arg1)
         if string.find(lower, "fifteen seconds") then
-            -- Trigger actual /pull 15 command instead of party chat text
-            local editBox = ChatFrame1EditBox
-            if editBox then
-                editBox:SetText("/pull 15")
-                ChatEdit_SendText(editBox)
-            end
-            WFC:Print("|cffffff00[Arena]|r Executed /pull 15.")
+            TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
