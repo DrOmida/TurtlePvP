@@ -170,35 +170,44 @@ function WFC.Frame:StopTicker()
     end
 end
 
+local scanTooltip = CreateFrame("GameTooltip", "WFC_FlagScanTooltip", nil, "GameTooltipTemplate")
+
 local function CheckUnitForFlag(unit)
     if (WFC.allyCarrier and WFC.hordeCarrier) or not UnitExists(unit) or not UnitIsPlayer(unit) then return end
     local name = UnitName(unit)
     if not name or name == "Unknown" then return end
-    
-    local faction = UnitFactionGroup(unit)
     
     for i = 1, 32 do
         local tex = UnitBuff(unit, i)
         if not tex then break end
         tex = string.lower(tex)
         
-        -- Alliance Flag (carried by Horde)
-        if not WFC.allyCarrier and (string.find(tex, "inv_bannerpvp_02") or string.find(tex, "inv_banner_02")) then
-            if faction ~= "Alliance" then
-                WFC.allyCarrier = name
-                if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
-                WFC.Frame:UpdateVisibility()
-                WFC:Print("Scanner recovered Alliance Flag tracking on: " .. name)
-            end
-        end
-        
-        -- Horde Flag (carried by Alliance)
-        if not WFC.hordeCarrier and (string.find(tex, "inv_bannerpvp_01") or string.find(tex, "inv_banner_03")) then
-            if faction ~= "Horde" then
-                WFC.hordeCarrier = name
-                if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
-                WFC.Frame:UpdateVisibility()
-                WFC:Print("Scanner recovered Horde Flag tracking on: " .. name)
+        -- If we suspect a flag (texture has 'banner'), we officially verify the spell name
+        -- This prevents false positives from Battle Standards which share the identical icon!
+        if string.find(tex, "inv_banner") then
+            scanTooltip:SetOwner(UIParent, "ANCHOR_NONE")
+            scanTooltip:ClearLines()
+            scanTooltip:SetUnitBuff(unit, i)
+            local buffName = WFC_FlagScanTooltipTextLeft1 and WFC_FlagScanTooltipTextLeft1:GetText()
+            
+            if buffName then
+                buffName = string.lower(buffName)
+                
+                -- Alliance Flag (Silverwing Flag, carried by Horde)
+                if not WFC.allyCarrier and string.find(buffName, "silverwing flag") then
+                    WFC.allyCarrier = name
+                    if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+                    WFC.Frame:UpdateVisibility()
+                    WFC:Print("Scanner recovered Alliance Flag tracking on: " .. name)
+                end
+                
+                -- Horde Flag (Warsong Flag, carried by Alliance)
+                if not WFC.hordeCarrier and string.find(buffName, "warsong flag") then
+                    WFC.hordeCarrier = name
+                    if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+                    WFC.Frame:UpdateVisibility()
+                    WFC:Print("Scanner recovered Horde Flag tracking on: " .. name)
+                end
             end
         end
     end
