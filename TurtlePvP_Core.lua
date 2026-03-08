@@ -11,6 +11,7 @@ TurtlePvPConfig = TurtlePvPConfig or {
     minimapPos = 45,
     debug = false,
     frameX = 0,
+    frameY = -150,
     framePoint = "TOP",
     locked = false,
     arenaFrameX = 0,
@@ -154,6 +155,7 @@ frame:SetScript("OnEvent", function()
         if not TurtlePvPConfig.arenaFrameX then TurtlePvPConfig.arenaFrameX = 0 end
         if not TurtlePvPConfig.arenaFrameY then TurtlePvPConfig.arenaFrameY = 0 end
         if TurtlePvPConfig.arenaLocked == nil then TurtlePvPConfig.arenaLocked = false end
+        if TurtlePvPConfig.efcLocked   == nil then TurtlePvPConfig.efcLocked   = true  end
 
         -- Re-evaluate capability mod presence after all addons have loaded
         WFC.hasNampower = (GetNampowerVersion ~= nil)
@@ -169,7 +171,7 @@ frame:SetScript("OnEvent", function()
         end
         local npStr = WFC.hasNampower and "|cff00ff00Yes|r" or "|cffff0000No|r"
         local unitXPStr = WFC.hasUnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
-        WFC:Print("Loaded. Nampower: " .. npStr .. " UnitXP: " .. unitXPStr .. " (Type /wfc info)")
+        WFC:Print("Loaded. Nampower: " .. npStr .. " UnitXP: " .. unitXPStr .. " (Type /tpvp)")
         WFC:CheckZone()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         WFC:CheckZone()

@@ -10,14 +10,11 @@ WFC.Minimap = {}
 local GOLD  = "|cffffd700"
 local WHITE = "|cffffffff"
 local GRAY  = "|cffaaaaaa"
-local GREEN = "|cff00ff00"
-local RED   = "|cffff0000"
 local TEAL  = "|cff55ee22"
 
 -- Forward refs populated in Build* functions
-local btn, panel, qMenu
+local btn, panel
 local panelBuilt = false
-local qMenuBuilt = false
 local allChecks  = {}
 
 -- Angle-based minimap positioning (exactly as LibDBIcon-1.0 does it)
@@ -49,75 +46,6 @@ local function MakeLine(parent, y)
     t:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -8, y)
     t:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
     t:SetVertexColor(0.3, 0.3, 0.3, 1)
-end
-
--- ─────────────────────────────────────────────────────────────────────────────
--- Quick right-click menu
--- ─────────────────────────────────────────────────────────────────────────────
-function WFC.Minimap:BuildQuickMenu()
-    if qMenuBuilt then return end
-    qMenuBuilt = true
-
-    qMenu = CreateFrame("Frame", "TurtlePvPQuickMenu", UIParent)
-    qMenu:SetWidth(196)
-    qMenu:SetFrameStrata("TOOLTIP")
-    qMenu:SetBackdrop({
-        bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 12,
-        insets = { left=3, right=3, top=3, bottom=3 },
-    })
-    qMenu:SetBackdropColor(0, 0, 0, 0.95)
-    qMenu:Hide()
-
-    local titleFs = qMenu:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    titleFs:SetPoint("TOP", 0, -8)
-    titleFs:SetText(TEAL .. "Turtle" .. "|rPvP  " .. GOLD .. "Options|r")
-
-    local items = {
-        { "Toggle WSG Caller", function()
-            TurtlePvPConfig.wsgEnabled = not TurtlePvPConfig.wsgEnabled
-            WFC:CheckZone(true)
-            WFC:Print("WSG Caller " .. (TurtlePvPConfig.wsgEnabled and GREEN.."ON|r" or RED.."OFF|r"))
-        end },
-        { "Toggle Arena HUD", function()
-            TurtlePvPConfig.arenaEnabled = not TurtlePvPConfig.arenaEnabled
-            WFC:CheckZone(true)
-            WFC:Print("Arena HUD " .. (TurtlePvPConfig.arenaEnabled and GREEN.."ON|r" or RED.."OFF|r"))
-        end },
-        { "Toggle EFC Map", function()
-            if WFC.EFCReport and WFC.EFCReport.Toggle then WFC.EFCReport:Toggle() end
-        end },
-        { "Reset All Windows", function()
-            WFC.Minimap:ResetAllPositions()
-        end },
-        { "Open Settings", function() WFC.Minimap:TogglePanel() end },
-    }
-
-    local yOff = -24
-    for _, item in ipairs(items) do
-        local b = CreateFrame("Button", nil, qMenu)
-        b:SetWidth(178); b:SetHeight(18)
-        b:SetPoint("TOP", qMenu, "TOP", 0, yOff)
-        b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight")
-        local fs = b:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        fs:SetPoint("LEFT", 6, 0)
-        fs:SetText(WHITE .. item[1] .. "|r")
-        local fn = item[2]
-        b:SetScript("OnClick", function() qMenu:Hide(); if fn then fn() end end)
-        yOff = yOff - 20
-    end
-    qMenu:SetHeight(math.abs(yOff) + 6)
-
-    -- Auto-hide on outside click
-    local hider = CreateFrame("Frame")
-    hider:SetScript("OnUpdate", function()
-        if qMenu:IsVisible() and IsMouseButtonDown("LeftButton") then
-            if not MouseIsOver(qMenu) and (not btn or not MouseIsOver(btn)) then
-                qMenu:Hide()
-            end
-        end
-    end)
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -346,7 +274,7 @@ function WFC.Minimap:BuildPanel()
     local rstBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     rstBtn:SetWidth(100); rstBtn:SetHeight(20)
     rstBtn:SetPoint("TOPLEFT", panel, "TOPLEFT", 212, -35)
-    rstBtn:SetText("Reset Pos.")
+    rstBtn:SetText("Reset Positions")
     rstBtn:SetScript("OnClick", function() WFC.Minimap:ResetAllPositions() end)
 
     -- ══════════════════════════════════════════════════════════════════════════
@@ -548,6 +476,5 @@ local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("VARIABLES_LOADED")
 initFrame:SetScript("OnEvent", function()
     if not TurtlePvPConfig then TurtlePvPConfig = {} end
-    WFC.Minimap:BuildQuickMenu()
     WFC.Minimap:BuildLauncherButton()
 end)

@@ -41,7 +41,6 @@ local BUTTONS = {
     { x={34,34}, y={-194,-2}, w=64, h=32, tex="hroof.blp",   text="EFC Horde roof!" },
 }
 
-if not TurtlePvPConfig then TurtlePvPConfig = {} end
 
 local function GetFactionIdx()
     return (UnitFactionGroup("player") == "Horde") and 2 or 1

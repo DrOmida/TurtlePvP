@@ -7,7 +7,6 @@ function WFC.Frame:Initialize()
     hud:SetHeight(60)
     hud:SetPoint(TurtlePvPConfig.framePoint, UIParent, TurtlePvPConfig.framePoint, TurtlePvPConfig.frameX, TurtlePvPConfig.frameY)
     hud:SetMovable(true)
-    hud:SetMovable(true)
     
     local unlockBg = hud:CreateTexture(nil, "BACKGROUND")
     unlockBg:SetAllPoints()
@@ -62,9 +61,9 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
         if arg1 == "RightButton" then
             TurtlePvPConfig.locked = not TurtlePvPConfig.locked
             if TurtlePvPConfig.locked then
-                WFC:Print("HUD Locked.")
+                WFC:Print("WSG HUD Locked.")
             else
-                WFC:Print("HUD Unlocked. You can now drag the HUD.")
+                WFC:Print("WSG HUD Unlocked. Drag to move, right-click to lock.")
             end
             WFC.Frame:UpdateLockState()
             return
@@ -406,6 +405,7 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     end
 
     -- 4. Calculate aesthetics & dispatch bounds tracking
+    local classColor = nil   -- local: prevents bleed between carrier ticks
     if targetId and found then
         if UnitClass then
             local _, eClass = UnitClass(targetId)

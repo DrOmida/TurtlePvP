@@ -13,14 +13,6 @@ SlashCmdList["TURTLEPVP"] = function(msg)
     if cmd == "info" or not cmd then
         if WFC.Minimap and WFC.Minimap.TogglePanel then
             WFC.Minimap:TogglePanel()
-        else
-            WFC:Print("TurtlePvP Commands:")
-            WFC:Print("  /tpvp - Open Config Panel")
-            WFC:Print("  /tpvp force wsg - Force-enable WSG mode")
-            WFC:Print("  /tpvp force arena - Force-enable Arena mode")
-            WFC:Print("  /tpvp reset - Reset HUD positions")
-            WFC:Print("  /tpvp status - Show current settings")
-            WFC:Print("  /tpvp debug on/off - Toggle debug messages")
         end
     elseif cmd == "debug" then
         if args[2] == "on" then
@@ -61,13 +53,9 @@ SlashCmdList["TURTLEPVP"] = function(msg)
             WFC:Print("Populated WSG tracking HUD with test data. (Type '/tpvp force efc' to toggle the minimap grid.)")
         end
     elseif cmd == "reset" then
-        TurtlePvPConfig.framePoint = "TOP"
-        TurtlePvPConfig.frameX = 0
-        TurtlePvPConfig.frameY = -150
-        TurtlePvPConfig.arenaFramePoint = "CENTER"
-        TurtlePvPConfig.arenaFrameX = 0
-        TurtlePvPConfig.arenaFrameY = 0
-        WFC:Print("Frame positions reset.")
+        if WFC.Minimap and WFC.Minimap.ResetAllPositions then
+            WFC.Minimap:ResetAllPositions()
+        end
     elseif cmd == "status" then
         local onOffStr = function(b) return b and "|cff00ff00[ON]|r" or "|cffff0000[OFF]|r" end
         WFC:Print("=== TurtlePvP Status ===")
