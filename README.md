@@ -4,7 +4,7 @@ A versatile PvP utility suite tailored for Turtle WoW, providing an intelligent 
 
 > **Author:** Adimo @ Tel'abim  
 > **Version:** 3.2  
-> **GitHub:** https://github.com/DrOmida/WSGFlagCaller
+> **GitHub:** https://github.com/DrOmida/TurtlePvP
 
 ---
 
