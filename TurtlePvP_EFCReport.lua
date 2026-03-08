@@ -213,7 +213,7 @@ efcZoneFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 efcZoneFrame:SetScript("OnEvent", function()
     local zone = GetRealZoneText and GetRealZoneText() or GetZoneText()
     if zone == "Warsong Gulch" then
-        if not WFC.EFCReport.enabled then
+        if not WFC.EFCReport.enabled and TurtlePvPConfig.efcEnabled ~= false then
             WFC.EFCReport:Show()
         end
     else

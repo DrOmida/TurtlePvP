@@ -3,6 +3,7 @@ TurtlePvPConfig = TurtlePvPConfig or {
     hpCallouts = true,
     hpThresholds = {75, 50, 25},
     showFrame = true,
+    efcEnabled = true,
     arenaEnabled = true,
     arenaDistance = true,
     arenaTrinkets = true,
@@ -14,7 +15,9 @@ TurtlePvPConfig = TurtlePvPConfig or {
     arenaFrameX = 0,
     arenaFrameY = 0,
     arenaFramePoint = "CENTER",
-    arenaLocked = false
+    arenaLocked = false,
+    btnX = nil,
+    btnY = nil
 }
 
 WFC = {
@@ -146,6 +149,7 @@ frame:SetScript("OnEvent", function()
         if TurtlePvPConfig.arenaEnabled == nil then TurtlePvPConfig.arenaEnabled = true end
         if TurtlePvPConfig.arenaDistance == nil then TurtlePvPConfig.arenaDistance = true end
         if TurtlePvPConfig.arenaTrinkets == nil then TurtlePvPConfig.arenaTrinkets = true end
+        if TurtlePvPConfig.efcEnabled == nil then TurtlePvPConfig.efcEnabled = true end
         if not TurtlePvPConfig.minimapPos then TurtlePvPConfig.minimapPos = 45 end
         if not TurtlePvPConfig.arenaFramePoint then TurtlePvPConfig.arenaFramePoint = "CENTER" end
         if not TurtlePvPConfig.arenaFrameX then TurtlePvPConfig.arenaFrameX = 0 end

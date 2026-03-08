@@ -1,7 +1,7 @@
 ## Interface: 11200
 ## Title: |cff99ff33Turtle|rPvP
 ## Notes: PvP utility toolkit: WSG Flag Caller + Arena Enemy Tracker + EFC Reporter
-## Version: 3.1.0
+## Version: 3.2.0
 ## Author: DrOmida
 ## SavedVariables: TurtlePvPConfig
 ## OptionalDeps: Nampower, UnitXP
