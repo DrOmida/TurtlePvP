@@ -269,16 +269,11 @@ function WFC.Minimap:BuildPanel()
             if not v and WFC.EFCReport and WFC.EFCReport.enabled then WFC.EFCReport:Hide() end
         end)
 
-    -- Info line replacing old lock checkbox
-    local lockInfo = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    lockInfo:SetPoint("TOPLEFT", 16, -118)
-    lockInfo:SetText(GRAY .. "▸ Right-click any HUD to lock / unlock it|r")
-
     local thresh = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    thresh:SetPoint("TOPLEFT", 44, -134)
+    thresh:SetPoint("TOPLEFT", 44, -118)
     thresh:SetText(GRAY .. "HP callout thresholds: 75% / 50% / 25%|r")
 
-    MakeLine(sPage, -148)
+    MakeLine(sPage, -132)
 
     -- ── Arena ─────────────────────────────────────────────────────────────────
     MakeHeader(sPage, "Arena Enemy HUD", -156)
@@ -299,12 +294,16 @@ function WFC.Minimap:BuildPanel()
     MakeLine(sPage, -262)
 
     -- ── Test / Preview buttons ────────────────────────────────────────────────
+    local lockTip = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    lockTip:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -254)
+    lockTip:SetText(GRAY .. "▸ Right-click any HUD to lock / unlock it|r")
+
     local wsgActive   = false
     local arenaActive = false
 
     local wsgBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     wsgBtn:SetWidth(140); wsgBtn:SetHeight(22)
-    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -272)
+    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -268)
     wsgBtn:SetText("Test WSG HUD")
     wsgBtn:SetScript("OnClick", function()
         wsgActive = not wsgActive
@@ -327,7 +326,7 @@ function WFC.Minimap:BuildPanel()
 
     local arenaBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     arenaBtn:SetWidth(140); arenaBtn:SetHeight(22)
-    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -272)
+    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -268)
     arenaBtn:SetText("Test Arena HUD")
     arenaBtn:SetScript("OnClick", function()
         arenaActive = not arenaActive
@@ -475,10 +474,10 @@ function WFC.Minimap:BuildLauncherButton()
     bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
     bg:SetPoint("TOPLEFT", 7, -5)
 
-    -- Addon icon
+    -- Addon icon — PvP battle flag banner
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetWidth(17); icon:SetHeight(17)
-    icon:SetTexture("Interface\\Icons\\Ability_DualWield")
+    icon:SetTexture("Interface\\Icons\\INV_BannerPVP_01")
     icon:SetPoint("TOPLEFT", 7, -6)
 
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
@@ -505,33 +504,15 @@ function WFC.Minimap:BuildLauncherButton()
     btn:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_LEFT")
         GameTooltip:SetText(TEAL .. "Turtle|rPvP")
-        GameTooltip:AddLine("Left-click: Settings",    1, 1, 1)
-        GameTooltip:AddLine("Right-click: Quick menu", 0.8, 0.8, 0.8)
-        GameTooltip:AddLine("Drag: Move button",       0.6, 0.6, 0.6)
+        GameTooltip:AddLine("Click: Open Settings", 1, 1, 1)
+        GameTooltip:AddLine("Drag: Move button",    0.6, 0.6, 0.6)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    -- Clicks
+    -- Both left and right click open the settings panel
     btn:SetScript("OnClick", function()
-        if arg1 == "LeftButton" then
-            if qMenu then qMenu:Hide() end
-            WFC.Minimap:TogglePanel()
-        else
-            if not qMenuBuilt then WFC.Minimap:BuildQuickMenu() end
-            if qMenu then
-                if qMenu:IsVisible() then
-                    qMenu:Hide()
-                else
-                    local x, y = GetCursorPosition()
-                    local s = UIParent:GetEffectiveScale() or 1
-                    x, y = x / s, y / s
-                    qMenu:ClearAllPoints()
-                    qMenu:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", x, y)
-                    qMenu:Show()
-                end
-            end
-        end
+        WFC.Minimap:TogglePanel()
     end)
 
     -- Hidden until PLAYER_LOGIN (pfUI and MinimapShape addons are loaded by then)
