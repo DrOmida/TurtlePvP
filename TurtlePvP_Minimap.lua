@@ -482,13 +482,14 @@ function WFC.Minimap:BuildLauncherButton()
     bg:SetPoint("TOPLEFT", 7, -5)
 
     -- Addon icon: faction-aware PvP banner
+    -- INV_BannerPVP_01 = Horde (red), INV_BannerPVP_02 = Alliance (blue)
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetWidth(17); icon:SetHeight(17)
     local iconTex
     if UnitFactionGroup and UnitFactionGroup("player") == "Horde" then
-        iconTex = "Interface\\Icons\\INV_BannerPVP_02"
-    else
         iconTex = "Interface\\Icons\\INV_BannerPVP_01"
+    else
+        iconTex = "Interface\\Icons\\INV_BannerPVP_02"
     end
     icon:SetTexture(iconTex)
     icon:SetPoint("TOPLEFT", 7, -6)
