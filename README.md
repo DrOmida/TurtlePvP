@@ -54,6 +54,8 @@ To unlock the full power of TurtlePvP, install these optional dependencies:
 | `/tpvp` or `/turtlepvp` | Open the Config Panel |
 | `/tpvp force wsg` | Force WSG mode (for testing outside battlegrounds) |
 | `/tpvp force arena` | Force Arena mode (for testing outside arenas) |
+| `/tpvp force efc` | Force toggle the EFC Location Map |
+| `/tpvp test wsg` | Populate the WSG Flag HUD with fake test carriers |
 | `/tpvp reset` | Reset all frame positions to defaults |
 | `/tpvp status` | Print module and dependency status to chat |
 | `/tpvp debug on/off` | Toggle internal debug output |

@@ -45,6 +45,20 @@ SlashCmdList["TURTLEPVP"] = function(msg)
             if WFC.Arena and WFC.Arena.Enable then WFC.Arena:Enable() end
             WFC:Debug("Force-entered Arena. Events enabled.")
             WFC:Print("Force-enabled Arena mode.")
+        elseif args[2] == "efc" then
+            if WFC.EFCReport and WFC.EFCReport.Toggle then
+                WFC.EFCReport:Toggle()
+                WFC:Print("Toggled EFC Reporter Grid.")
+            end
+        end
+    elseif cmd == "test" then
+        if args[2] == "wsg" then
+            WFC.inWSG = true
+            WFC.allyCarrier = UnitName("player")
+            WFC.hordeCarrier = "Thrall"
+            if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
+            if WFC.EFCReport and WFC.EFCReport.Show then WFC.EFCReport:Show() end
+            WFC:Print("Populated WSG tracking HUD with test data. (Type '/tpvp force efc' to toggle the minimap grid.)")
         end
     elseif cmd == "reset" then
         TurtlePvPConfig.framePoint = "TOP"
