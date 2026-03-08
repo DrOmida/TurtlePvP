@@ -119,8 +119,8 @@ function WFC.Minimap:BuildPanel()
     panelBuilt = true
 
     panel = CreateFrame("Frame", "TurtlePvPSettingsPanel", UIParent)
-    panel:SetWidth(300)
-    panel:SetHeight(320)
+    panel:SetWidth(310)
+    panel:SetHeight(340)
     panel:SetPoint("CENTER", 0, 60)
     panel:SetFrameStrata("HIGH")
     panel:SetMovable(true)
@@ -139,40 +139,81 @@ function WFC.Minimap:BuildPanel()
     panel:SetBackdropBorderColor(0.5, 0.5, 0.5, 1)
     panel:Hide()
 
-    -- Title
+    -- ── Header ──────────────────────────────────────────────
     local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
     title:SetPoint("TOPLEFT", 12, -10)
-    title:SetText("|cff55ee22Turtle|rPvP  " .. GRAY .. "Settings|r")
+    title:SetText("|cff55ee22Turtle|rPvP  " .. GRAY .. "v3.1|r")
 
-    local ver = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    ver:SetPoint("TOPRIGHT", -36, -12)
-    ver:SetText(GRAY .. "v3.1|r")
+    local closeBtn = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
+    closeBtn:SetWidth(26); closeBtn:SetHeight(26)
+    closeBtn:SetPoint("TOPRIGHT", -4, -4)
 
-    -- Close
-    local cb = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-    cb:SetWidth(26); cb:SetHeight(26)
-    cb:SetPoint("TOPRIGHT", -4, -4)
-
-    -- divider
-    local function MakeLine(y)
-        local t = panel:CreateTexture(nil, "ARTWORK")
+    -- ── Tab strip ────────────────────────────────────────────
+    local function MakeLine(parent, y)
+        local t = parent:CreateTexture(nil, "ARTWORK")
         t:SetHeight(1)
-        t:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, y)
-        t:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -8, y)
+        t:SetPoint("TOPLEFT",  parent, "TOPLEFT",   8, y)
+        t:SetPoint("TOPRIGHT", parent, "TOPRIGHT", -8, y)
         t:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
         t:SetVertexColor(0.3, 0.3, 0.3, 1)
     end
+    MakeLine(panel, -30)
 
-    local function MakeSectionHeader(text, y)
-        local fs = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        fs:SetPoint("TOPLEFT", panel, "TOPLEFT", 10, y)
+    local tabPages = {}
+    local tabBtns  = {}
+    local function SelectTab(idx)
+        for i, pg in ipairs(tabPages) do
+            if i == idx then pg:Show() else pg:Hide() end
+        end
+        for i, tb in ipairs(tabBtns) do
+            if i == idx then
+                tb:LockHighlight()
+                tb:SetBackdropBorderColor(1, 0.82, 0, 1)
+            else
+                tb:UnlockHighlight()
+                tb:SetBackdropBorderColor(0.4, 0.4, 0.4, 1)
+            end
+        end
+    end
+
+    local TAB_NAMES = { "Settings", "Credits" }
+    for i, name in ipairs(TAB_NAMES) do
+        local tb = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+        tb:SetWidth(90); tb:SetHeight(20)
+        tb:SetPoint("TOPLEFT", panel, "TOPLEFT", 8 + (i-1)*96, -35)
+        tb:SetText(name)
+        local idx = i
+        tb:SetScript("OnClick", function() SelectTab(idx) end)
+        table.insert(tabBtns, tb)
+    end
+
+    MakeLine(panel, -58)
+
+    -- ── Page container helper ────────────────────────────────
+    local function MakePage()
+        local pg = CreateFrame("Frame", nil, panel)
+        pg:SetPoint("TOPLEFT",     panel, "TOPLEFT",   0, -62)
+        pg:SetPoint("BOTTOMRIGHT", panel, "BOTTOMRIGHT", 0, 0)
+        pg:Hide()
+        table.insert(tabPages, pg)
+        return pg
+    end
+
+    -- ════════════════════════════════════════════
+    -- TAB 1: Settings
+    -- ════════════════════════════════════════════
+    local settingsPage = MakePage()
+
+    local function MakeHeader(parent, text, y)
+        local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 10, y)
         fs:SetText(GOLD .. text .. "|r")
     end
 
-    local function AddCheck(label, indentX, y, getF, setF)
-        local c = CreateFrame("CheckButton", nil, panel, "UICheckButtonTemplate")
+    local function AddCheck(parent, label, indentX, y, getF, setF)
+        local c = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
         c:SetWidth(24); c:SetHeight(24)
-        c:SetPoint("TOPLEFT", panel, "TOPLEFT", indentX, y)
+        c:SetPoint("TOPLEFT", parent, "TOPLEFT", indentX, y)
         local fs = c:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
         fs:SetPoint("LEFT", c, "RIGHT", 4, 1)
         fs:SetText(WHITE .. label .. "|r")
@@ -182,68 +223,76 @@ function WFC.Minimap:BuildPanel()
         return c
     end
 
-    MakeLine(-30)
-
-    -- WSG section
-    MakeSectionHeader("WSG Flag Caller", -38)
-    AddCheck("Enable WSG Flag Caller Tracking", 16, -58,
+    -- WSG
+    MakeHeader(settingsPage, "WSG Flag Caller", -4)
+    AddCheck(settingsPage, "Enable WSG Flag Caller Tracking", 16, -24,
         function() return TurtlePvPConfig.wsgEnabled end,
         function(v) TurtlePvPConfig.wsgEnabled = v; WFC:CheckZone(true) end)
-    AddCheck("Enemy HP Callouts in /bg chat", 32, -82,
+    AddCheck(settingsPage, "Enemy HP Callouts in /bg chat", 32, -48,
         function() return TurtlePvPConfig.hpCallouts end,
         function(v) TurtlePvPConfig.hpCallouts = v end)
-    AddCheck("Show Flag Tracker HUD window", 32, -106,
+    AddCheck(settingsPage, "Show Flag Tracker HUD", 32, -72,
         function() return TurtlePvPConfig.showFrame end,
-        function(v) TurtlePvPConfig.showFrame = v; if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end end)
+        function(v)
+            TurtlePvPConfig.showFrame = v
+            if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
+        end)
 
-    local thresh = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    thresh:SetPoint("TOPLEFT", 44, -130)
+    local thresh = settingsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    thresh:SetPoint("TOPLEFT", 44, -96)
     thresh:SetText(GRAY .. "HP callout thresholds: 75% / 50% / 25%|r")
 
-    local forceWsg = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    forceWsg:SetWidth(140); forceWsg:SetHeight(22)
-    forceWsg:SetPoint("TOPLEFT", 16, -150)
-    forceWsg:SetText("Force WSG Window")
-    forceWsg:SetScript("OnClick", function()
-        WFC.inWSG = true
-        WFC.allyCarrier = UnitName("player"); WFC.hordeCarrier = "Thrall"
-        if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
-        if WFC.EFCReport and WFC.EFCReport.Show then WFC.EFCReport:Show() end
-        WFC:Print("WSG window forced with test data.")
-    end)
+    MakeLine(settingsPage, -110)
 
-    MakeLine(-180)
-
-    -- Arena section
-    MakeSectionHeader("Arena Enemy HUD", -188)
-    AddCheck("Enable Arena Enemy Tracker HUD", 16, -208,
+    -- Arena
+    MakeHeader(settingsPage, "Arena Enemy HUD", -118)
+    AddCheck(settingsPage, "Enable Arena Enemy Tracker HUD", 16, -138,
         function() return TurtlePvPConfig.arenaEnabled end,
         function(v) TurtlePvPConfig.arenaEnabled = v; WFC:CheckZone(true) end)
-    AddCheck("Show enemy distance  (UnitXP)", 32, -232,
+    AddCheck(settingsPage, "Show enemy distance (UnitXP)", 32, -162,
         function() return TurtlePvPConfig.arenaDistance end,
         function(v) TurtlePvPConfig.arenaDistance = v end)
-    AddCheck("Track trinkets / racials  (Nampower)", 32, -256,
+    AddCheck(settingsPage, "Track trinkets / racials (Nampower)", 32, -186,
         function() return TurtlePvPConfig.arenaTrinkets end,
         function(v) TurtlePvPConfig.arenaTrinkets = v end)
 
-    local tip = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    tip:SetPoint("TOPLEFT", 44, -280)
-    tip:SetText(GRAY .. "Auto-activates in Arena zones.|r")
+    local arenaTip = settingsPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    arenaTip:SetPoint("TOPLEFT", 44, -210)
+    arenaTip:SetText(GRAY .. "Auto-activates in PvP Arena zones.|r")
 
-    MakeLine(-294)
+    MakeLine(settingsPage, -224)
 
-    -- Bottom buttons
-    local efcBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    efcBtn:SetWidth(100); efcBtn:SetHeight(22)
-    efcBtn:SetPoint("BOTTOMLEFT", 10, 8)
-    efcBtn:SetText("EFC Map")
-    efcBtn:SetScript("OnClick", function()
-        if WFC.EFCReport and WFC.EFCReport.Toggle then WFC.EFCReport:Toggle() end
+    -- ── Combined WSG preview toggle button ────────────────────
+    local wsgPreviewActive = false
+    local previewBtn = CreateFrame("Button", nil, settingsPage, "UIPanelButtonTemplate")
+    previewBtn:SetWidth(170); previewBtn:SetHeight(22)
+    previewBtn:SetPoint("TOPLEFT", settingsPage, "TOPLEFT", 10, -234)
+    previewBtn:SetText("Preview WSG + EFC Windows")
+    previewBtn:SetScript("OnClick", function()
+        wsgPreviewActive = not wsgPreviewActive
+        if wsgPreviewActive then
+            WFC.inWSG      = true
+            WFC.allyCarrier  = UnitName("player")
+            WFC.hordeCarrier = "Thrall"
+            if WFC.Frame    and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
+            if WFC.EFCReport and WFC.EFCReport.Show        then WFC.EFCReport:Show() end
+            previewBtn:SetText("Hide WSG + EFC Windows")
+            WFC:Print("WSG preview active — both windows shown.")
+        else
+            WFC.inWSG      = false
+            WFC.allyCarrier  = nil
+            WFC.hordeCarrier = nil
+            if WFC.Frame    and WFC.Frame.Disable           then WFC.Frame:Disable() end
+            if WFC.EFCReport and WFC.EFCReport.Hide         then WFC.EFCReport:Hide() end
+            previewBtn:SetText("Preview WSG + EFC Windows")
+            WFC:Print("WSG preview hidden.")
+        end
     end)
 
-    local rstBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    -- Reset button bottom-right
+    local rstBtn = CreateFrame("Button", nil, settingsPage, "UIPanelButtonTemplate")
     rstBtn:SetWidth(110); rstBtn:SetHeight(22)
-    rstBtn:SetPoint("BOTTOMRIGHT", -10, 8)
+    rstBtn:SetPoint("BOTTOMRIGHT", settingsPage, "BOTTOMRIGHT", -10, 10)
     rstBtn:SetText("Reset Positions")
     rstBtn:SetScript("OnClick", function()
         TurtlePvPConfig.framePoint = "TOP"; TurtlePvPConfig.frameX = 0; TurtlePvPConfig.frameY = -150
@@ -251,13 +300,59 @@ function WFC.Minimap:BuildPanel()
         WFC:Print("Frame positions reset.")
     end)
 
-    -- Sync checkboxes on every open
+    -- ════════════════════════════════════════════
+    -- TAB 2: Credits
+    -- ════════════════════════════════════════════
+    local creditsPage = MakePage()
+
+    local function AddLine(parent, text, y, font)
+        local fs = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
+        fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
+        fs:SetText(text)
+        fs:SetJustifyH("LEFT")
+        return fs
+    end
+
+    AddLine(creditsPage, GOLD .. "Author|r",                    -6,  "GameFontNormal")
+    AddLine(creditsPage, WHITE .. "Adimo|r  " .. GRAY .. "@ Tel'abim|r",  -22)
+    AddLine(creditsPage, GRAY .. "github.com/DrOmida/WSGFlagCaller|r", -36)
+
+    AddLine(creditsPage, GOLD .. "Contributors / Inspiration|r", -56, "GameFontNormal")
+    AddLine(creditsPage, GRAY .. "EFC Reporter concept: Cubenicke (Yrrol@vanillagaming)|r", -72)
+    AddLine(creditsPage, GRAY .. "Map icons: lanevegame|r",          -86)
+    AddLine(creditsPage, GRAY .. "Arena frame concept: zetone/byCFM2|r", -100)
+
+    AddLine(creditsPage, GOLD .. "Changelog|r", -120, "GameFontNormal")
+
+    local changes = {
+        "|cff55ee22v3.1|r  Arena HUD: cast bars, trinket tracker,",
+        "       target indicator, dynamic width",
+        "|cff55ee22v3.1|r  Pull timer: leader check, /pull 15 via DBM",
+        "|cff55ee22v3.1|r  WSG: anti-spam sync (Adimo priority)",
+        "|cff55ee22v3.1|r  Curse of Tongues silences callouts",
+        "|cff55ee22v3.1|r  Flag scanner: tooltip name verification",
+        "       (fixes Battle Standard false-positives)",
+        "|cff55ee22v3.1|r  Faction lock: flags only on enemy players",
+        "|cff55ee22v3.1|r  New commands: /tpvp test wsg, force efc",
+        "|cff55ee22v3.1|r  Minimap button + settings panel rewrite",
+    }
+    local cy = -136
+    for _, line in ipairs(changes) do
+        AddLine(creditsPage, GRAY .. line .. "|r", cy)
+        cy = cy - 14
+    end
+
+    -- ── OnShow: sync checkboxes & reset tab to Settings ──────
     panel:SetScript("OnShow", function()
         for _, c in ipairs(allChecks) do
             if c.getF then c:SetChecked(c.getF() and 1 or 0) end
         end
+        SelectTab(1)
     end)
 end
+
+
+
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Build the minimap button (called from VARIABLES_LOADED)
