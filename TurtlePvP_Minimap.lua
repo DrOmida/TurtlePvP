@@ -114,14 +114,28 @@ end
 -- Shared: reset all frame positions
 -- ─────────────────────────────────────────────────────────────────────────────
 function WFC.Minimap:ResetAllPositions()
-    -- WSG HUD
+    -- WSG HUD: clear saved point and physically move live frame
     TurtlePvPConfig.framePoint = "TOP"
     TurtlePvPConfig.frameX     = 0
     TurtlePvPConfig.frameY     = -150
-    -- Arena HUD
+    if TurtlePvPHUDFrame then
+        TurtlePvPHUDFrame:ClearAllPoints()
+        TurtlePvPHUDFrame:SetPoint("TOP", UIParent, "TOP", 0, -150)
+    elseif WFC.Frame and WFC.Frame.frame then
+        WFC.Frame.frame:ClearAllPoints()
+        WFC.Frame.frame:SetPoint("TOP", UIParent, "TOP", 0, -150)
+    end
+    -- Arena HUD: clear saved point and physically move live frame
     TurtlePvPConfig.arenaFramePoint = "CENTER"
     TurtlePvPConfig.arenaFrameX     = 0
     TurtlePvPConfig.arenaFrameY     = 0
+    if TurtlePvPArenaFrame then
+        TurtlePvPArenaFrame:ClearAllPoints()
+        TurtlePvPArenaFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    elseif WFC.Arena and WFC.Arena.frame then
+        WFC.Arena.frame:ClearAllPoints()
+        WFC.Arena.frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    end
     -- EFC Reporter
     TurtlePvPConfig.efcFrameX = 400
     TurtlePvPConfig.efcFrameY = 300
@@ -134,7 +148,7 @@ function WFC.Minimap:ResetAllPositions()
     TurtlePvPConfig.btnY = nil
     if btn then
         btn:ClearAllPoints()
-        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -220, -2)
+        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -250, -25)
     end
     WFC:Print("All window positions reset.")
 end
@@ -322,11 +336,11 @@ function WFC.Minimap:BuildPanel()
         end
     end)
 
-    -- ── Bottom utility ────────────────────────────────────────────────────────
-    local rstBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
-    rstBtn:SetWidth(140); rstBtn:SetHeight(22)
-    rstBtn:SetPoint("BOTTOMRIGHT", sPage, "BOTTOMRIGHT", -10, 10)
-    rstBtn:SetText("Reset All Positions")
+    -- ── Bottom utility: reset button sits next to the Credits tab ──────────
+    local rstBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+    rstBtn:SetWidth(118); rstBtn:SetHeight(20)
+    rstBtn:SetPoint("TOPLEFT", panel, "TOPLEFT", 210, -35)
+    rstBtn:SetText("Reset Positions")
     rstBtn:SetScript("OnClick", function() WFC.Minimap:ResetAllPositions() end)
 
     -- ══════════════════════════════════════════════════════════════════════════
@@ -353,12 +367,12 @@ function WFC.Minimap:BuildPanel()
 
     StaticLine(cPage, GOLD .. "Changelog|r",                                -118, "GameFontNormal")
 
-    -- Scrollable changelog area
-    local scrollH   = 162   -- visible height
+    -- Scrollable changelog area (height capped so it never escapes the panel)
+    local scrollH = 148
     local scrollFrame = CreateFrame("ScrollFrame", "TurtlePvPCreditsScroll", cPage, "UIPanelScrollFrameTemplate")
-    scrollFrame:SetWidth(284)
+    scrollFrame:SetWidth(278)
     scrollFrame:SetHeight(scrollH)
-    scrollFrame:SetPoint("TOPLEFT", cPage, "TOPLEFT", 10, -134)
+    scrollFrame:SetPoint("TOPLEFT", cPage, "TOPLEFT", 8, -134)
 
     local content = CreateFrame("Frame", nil, scrollFrame)
     content:SetWidth(260)
@@ -417,16 +431,17 @@ function WFC.Minimap:BuildLauncherButton()
     btn = CreateFrame("Button", "TurtlePvPLauncherBtn", UIParent)
     btn:SetWidth(32)
     btn:SetHeight(32)
-    btn:SetFrameStrata("MEDIUM")
+    btn:SetFrameStrata("HIGH")  -- HIGH so pfUI bars don't cover it
     btn:SetMovable(true)
     btn:SetClampedToScreen(true)
+    btn:EnableMouse(true)
     btn:RegisterForDrag("LeftButton")
     btn:SetScript("OnDragStart", function() this:StartMoving() end)
     btn:SetScript("OnDragStop", function()
         this:StopMovingOrSizing()
-        local _, _, _, x, y = this:GetPoint()
-        TurtlePvPConfig.btnX = x
-        TurtlePvPConfig.btnY = y
+        -- Save using GetLeft/GetTop — same approach as WIM
+        TurtlePvPConfig.btnX = this:GetLeft()
+        TurtlePvPConfig.btnY = this:GetTop() - GetScreenHeight()
     end)
 
     -- Background
@@ -450,13 +465,16 @@ function WFC.Minimap:BuildLauncherButton()
     -- Highlight
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-    -- Position: saved or default (top-right area near minimap)
+    -- Position: saved (BOTTOMLEFT offset = GetLeft, GetTop-screenH) or default center-top
     btn:ClearAllPoints()
     if TurtlePvPConfig.btnX and TurtlePvPConfig.btnY then
-        btn:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", TurtlePvPConfig.btnX, TurtlePvPConfig.btnY)
+        btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT",
+            TurtlePvPConfig.btnX, TurtlePvPConfig.btnY + GetScreenHeight())
     else
-        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -220, -2)
+        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -250, -25)
     end
+    -- Raise above pfUI frames
+    btn:Raise()
 
     -- Tooltip
     btn:SetScript("OnEnter", function()
