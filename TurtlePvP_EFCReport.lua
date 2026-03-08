@@ -107,8 +107,9 @@ function WFC.EFCReport:Create()
         TurtlePvPConfig.efcFrameX =  this:GetLeft()
         TurtlePvPConfig.efcFrameY = -this:GetTop() + GetScreenHeight()
     end)
-    frame:RegisterForClicks("RightButtonUp")
-    frame:SetScript("OnClick", function()
+    -- Right-click anywhere on the frame to toggle lock
+    -- (Frames don't have RegisterForClicks in 1.12 — use OnMouseUp)
+    frame:SetScript("OnMouseUp", function()
         if arg1 == "RightButton" then
             TurtlePvPConfig.efcLocked = not TurtlePvPConfig.efcLocked
             WFC.EFCReport:UpdateLockState()
