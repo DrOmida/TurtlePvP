@@ -1,7 +1,7 @@
 --[[
 TurtlePvP_Minimap.lua  v3.2
-Free-floating launcher button (UIParent, pfUI-safe).
-All frame creation deferred to VARIABLES_LOADED.
+Minimap button parents to Minimap frame, uses LibDBIcon-style angle positioning.
+All frame creation deferred to VARIABLES_LOADED / PLAYER_LOGIN.
 TogglePanel / public API defined at parse-time so it is always available.
 --]]
 
@@ -19,6 +19,16 @@ local btn, panel, qMenu
 local panelBuilt = false
 local qMenuBuilt = false
 local allChecks  = {}
+
+-- Angle-based minimap positioning (exactly as LibDBIcon-1.0 does it)
+local function updateMinimapPos(button, angle)
+    local rad = math.rad(angle or 225)
+    local cos, sin = math.cos(rad), math.sin(rad)
+    local w = (Minimap:GetWidth()  / 2) + 5
+    local h = (Minimap:GetHeight() / 2) + 5
+    button:ClearAllPoints()
+    button:SetPoint("CENTER", Minimap, "CENTER", cos * w, sin * h)
+end
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Public API  (defined before any frame creation so /tpvp always finds them)
@@ -123,7 +133,7 @@ function WFC.Minimap:ResetAllPositions()
         wsgHud:ClearAllPoints()
         wsgHud:SetPoint("TOP", UIParent, "TOP", 0, -150)
     end
-    -- Arena HUD (local 'hud' var; disable+re-enable forces reposition from saved config)
+    -- Arena HUD (local var; disable+re-enable repositions from saved config)
     TurtlePvPConfig.arenaFramePoint = "CENTER"
     TurtlePvPConfig.arenaFrameX     = 0
     TurtlePvPConfig.arenaFrameY     = 0
@@ -131,7 +141,7 @@ function WFC.Minimap:ResetAllPositions()
         WFC.Arena:Disable()
         WFC.Arena:Enable()
     end
-    -- EFC Reporter (global frame name is TurtlePvPEFCFrame)
+    -- EFC Reporter
     TurtlePvPConfig.efcFrameX = 400
     TurtlePvPConfig.efcFrameY = 300
     local efcF = getglobal("TurtlePvPEFCFrame")
@@ -139,13 +149,9 @@ function WFC.Minimap:ResetAllPositions()
         efcF:ClearAllPoints()
         efcF:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 400, -300)
     end
-    -- Launcher button
-    TurtlePvPConfig.btnX = nil
-    TurtlePvPConfig.btnY = nil
-    if btn then
-        btn:ClearAllPoints()
-        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -250, -25)
-    end
+    -- Minimap button: reset angle to default
+    TurtlePvPConfig.minimapPos = 225
+    if btn then updateMinimapPos(btn, 225) end
     WFC:Print("All window positions reset.")
 end
 
@@ -262,36 +268,35 @@ function WFC.Minimap:BuildPanel()
             TurtlePvPConfig.efcEnabled = v
             if not v and WFC.EFCReport and WFC.EFCReport.enabled then WFC.EFCReport:Hide() end
         end)
-    AddCheck(sPage, "Lock EFC Map (right-click to unlock)", 32, -120,
-        function() return TurtlePvPConfig.efcLocked end,
-        function(v)
-            TurtlePvPConfig.efcLocked = v
-            if WFC.EFCReport then WFC.EFCReport:UpdateLockState() end
-        end)
+
+    -- Info line replacing old lock checkbox
+    local lockInfo = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    lockInfo:SetPoint("TOPLEFT", 16, -118)
+    lockInfo:SetText(GRAY .. "▸ Right-click any HUD to lock / unlock it|r")
 
     local thresh = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    thresh:SetPoint("TOPLEFT", 44, -144)
+    thresh:SetPoint("TOPLEFT", 44, -134)
     thresh:SetText(GRAY .. "HP callout thresholds: 75% / 50% / 25%|r")
 
-    MakeLine(sPage, -158)
+    MakeLine(sPage, -148)
 
     -- ── Arena ─────────────────────────────────────────────────────────────────
-    MakeHeader(sPage, "Arena Enemy HUD", -166)
-    AddCheck(sPage, "Enable Arena Enemy Tracker HUD",      16, -186,
+    MakeHeader(sPage, "Arena Enemy HUD", -156)
+    AddCheck(sPage, "Enable Arena Enemy Tracker HUD",      16, -176,
         function() return TurtlePvPConfig.arenaEnabled end,
         function(v) TurtlePvPConfig.arenaEnabled = v; WFC:CheckZone(true) end)
-    AddCheck(sPage, "Show enemy distance (UnitXP)",        32, -210,
+    AddCheck(sPage, "Show enemy distance (UnitXP)",        32, -200,
         function() return TurtlePvPConfig.arenaDistance end,
         function(v) TurtlePvPConfig.arenaDistance = v end)
-    AddCheck(sPage, "Track trinkets / racials (Nampower)", 32, -234,
+    AddCheck(sPage, "Track trinkets / racials (Nampower)", 32, -224,
         function() return TurtlePvPConfig.arenaTrinkets end,
         function(v) TurtlePvPConfig.arenaTrinkets = v end)
 
     local arenaTip = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    arenaTip:SetPoint("TOPLEFT", 44, -258)
+    arenaTip:SetPoint("TOPLEFT", 44, -248)
     arenaTip:SetText(GRAY .. "Auto-activates in PvP Arena zones.|r")
 
-    MakeLine(sPage, -272)
+    MakeLine(sPage, -262)
 
     -- ── Test / Preview buttons ────────────────────────────────────────────────
     local wsgActive   = false
@@ -299,7 +304,7 @@ function WFC.Minimap:BuildPanel()
 
     local wsgBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     wsgBtn:SetWidth(140); wsgBtn:SetHeight(22)
-    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -282)
+    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -272)
     wsgBtn:SetText("Test WSG HUD")
     wsgBtn:SetScript("OnClick", function()
         wsgActive = not wsgActive
@@ -322,7 +327,7 @@ function WFC.Minimap:BuildPanel()
 
     local arenaBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     arenaBtn:SetWidth(140); arenaBtn:SetHeight(22)
-    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -282)
+    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -272)
     arenaBtn:SetText("Test Arena HUD")
     arenaBtn:SetScript("OnClick", function()
         arenaActive = not arenaActive
@@ -446,82 +451,74 @@ function WFC.Minimap:BuildPanel()
 end
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- Free-floating launcher button  (parent = UIParent, pfUI-safe)
+-- Minimap launcher button  (parent = Minimap, LibDBIcon-style angle math)
 -- ─────────────────────────────────────────────────────────────────────────────
 function WFC.Minimap:BuildLauncherButton()
-    btn = CreateFrame("Button", "TurtlePvPLauncherBtn", UIParent)
-    btn:SetWidth(32)
-    btn:SetHeight(32)
+    btn = CreateFrame("Button", "TurtlePvPMinimapBtn", Minimap)
+    btn:SetWidth(31)
+    btn:SetHeight(31)
     btn:SetFrameStrata("HIGH")
-    btn:SetToplevel(true)    -- always renders above pfUI stacking
-    btn:SetMovable(true)
-    btn:SetClampedToScreen(true)
+    btn:SetFrameLevel(7)
     btn:EnableMouse(true)
+    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     btn:RegisterForDrag("LeftButton")
-    btn:SetScript("OnDragStart", function() this:StartMoving() end)
-    btn:SetScript("OnDragStop", function()
-        this:StopMovingOrSizing()
-        -- Save using GetLeft/GetTop — same approach as WIM
-        TurtlePvPConfig.btnX = this:GetLeft()
-        TurtlePvPConfig.btnY = this:GetTop() - GetScreenHeight()
-    end)
 
-    -- Background
+    -- TrackingBorder round ring overlay (same as LibDBIcon)
+    local overlay = btn:CreateTexture(nil, "OVERLAY")
+    overlay:SetWidth(53); overlay:SetHeight(53)
+    overlay:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+    overlay:SetPoint("TOPLEFT", 0, 0)
+
+    -- Circular background
     local bg = btn:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints(btn)
-    bg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    bg:SetVertexColor(0.05, 0.05, 0.15, 0.9)
+    bg:SetWidth(20); bg:SetHeight(20)
+    bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
+    bg:SetPoint("TOPLEFT", 7, -5)
 
-    -- Icon
+    -- Addon icon
     local icon = btn:CreateTexture(nil, "ARTWORK")
+    icon:SetWidth(17); icon:SetHeight(17)
     icon:SetTexture("Interface\\Icons\\Ability_DualWield")
-    icon:SetWidth(22); icon:SetHeight(22)
-    icon:SetPoint("CENTER")
+    icon:SetPoint("TOPLEFT", 7, -6)
 
-    -- Thin border
-    local edge = btn:CreateTexture(nil, "OVERLAY")
-    edge:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
-    edge:SetWidth(38); edge:SetHeight(38)
-    edge:SetPoint("CENTER")
-
-    -- Highlight
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-    -- Position: saved (BOTTOMLEFT offset = GetLeft, GetTop-screenH) or default center-top
-    btn:ClearAllPoints()
-    if TurtlePvPConfig.btnX and TurtlePvPConfig.btnY then
-        btn:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT",
-            TurtlePvPConfig.btnX, TurtlePvPConfig.btnY + GetScreenHeight())
-    else
-        btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -250, -25)
-    end
-    -- Raise above pfUI frames; small periodic re-raise handles pfUI re-stacking
-    btn:Raise()
-    local raiser = CreateFrame("Frame")
-    raiser.t = 0
-    raiser:SetScript("OnUpdate", function()
-        this.t = this.t + arg1
-        if this.t >= 5 then this.t = 0; btn:Raise() end
+    -- Drag: track mouse angle around Minimap center (same as LibDBIcon onUpdate)
+    btn:SetScript("OnDragStart", function()
+        this:SetScript("OnUpdate", function()
+            local mx, my = Minimap:GetCenter()
+            local px, py = GetCursorPosition()
+            local scale  = Minimap:GetEffectiveScale()
+            px, py = px / scale, py / scale
+            local angle = math.deg(math.atan2(py - my, px - mx))
+            -- Keep angle in [0, 360)
+            angle = angle - math.floor(angle / 360) * 360
+            TurtlePvPConfig.minimapPos = angle
+            updateMinimapPos(this, angle)
+        end)
+    end)
+    btn:SetScript("OnDragStop", function()
+        this:SetScript("OnUpdate", nil)
     end)
 
     -- Tooltip
     btn:SetScript("OnEnter", function()
         GameTooltip:SetOwner(this, "ANCHOR_LEFT")
         GameTooltip:SetText(TEAL .. "Turtle|rPvP")
-        GameTooltip:AddLine("Left-click: Settings",  1,1,1)
-        GameTooltip:AddLine("Right-click: Quick menu", 0.8,0.8,0.8)
-        GameTooltip:AddLine("Drag: Move button",     0.6,0.6,0.6)
+        GameTooltip:AddLine("Left-click: Settings",    1, 1, 1)
+        GameTooltip:AddLine("Right-click: Quick menu", 0.8, 0.8, 0.8)
+        GameTooltip:AddLine("Drag: Move button",       0.6, 0.6, 0.6)
         GameTooltip:Show()
     end)
     btn:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     -- Clicks
-    btn:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     btn:SetScript("OnClick", function()
         if arg1 == "LeftButton" then
             if qMenu then qMenu:Hide() end
             WFC.Minimap:TogglePanel()
         else
+            if not qMenuBuilt then WFC.Minimap:BuildQuickMenu() end
             if qMenu then
                 if qMenu:IsVisible() then
                     qMenu:Hide()
@@ -535,6 +532,17 @@ function WFC.Minimap:BuildLauncherButton()
                 end
             end
         end
+    end)
+
+    -- Hidden until PLAYER_LOGIN (pfUI and MinimapShape addons are loaded by then)
+    btn:Hide()
+
+    local loginFrame = CreateFrame("Frame")
+    loginFrame:RegisterEvent("PLAYER_LOGIN")
+    loginFrame:SetScript("OnEvent", function()
+        updateMinimapPos(btn, TurtlePvPConfig.minimapPos or 225)
+        btn:Show()
+        this:SetScript("OnEvent", nil)
     end)
 end
 

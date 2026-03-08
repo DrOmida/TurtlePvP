@@ -16,9 +16,7 @@ TurtlePvPConfig = TurtlePvPConfig or {
     arenaFrameX = 0,
     arenaFrameY = 0,
     arenaFramePoint = "CENTER",
-    arenaLocked = false,
-    btnX = nil,
-    btnY = nil
+    arenaLocked = false
 }
 
 WFC = {
