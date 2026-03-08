@@ -295,7 +295,7 @@ function WFC.Minimap:BuildPanel()
 
     -- ── Test / Preview buttons ────────────────────────────────────────────────
     local lockTip = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    lockTip:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -254)
+    lockTip:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -268)
     lockTip:SetText(GRAY .. "▸ Right-click any HUD to lock / unlock it|r")
 
     local wsgActive   = false
@@ -303,7 +303,7 @@ function WFC.Minimap:BuildPanel()
 
     local wsgBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     wsgBtn:SetWidth(140); wsgBtn:SetHeight(22)
-    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -268)
+    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -282)
     wsgBtn:SetText("Test WSG HUD")
     wsgBtn:SetScript("OnClick", function()
         wsgActive = not wsgActive
@@ -326,7 +326,7 @@ function WFC.Minimap:BuildPanel()
 
     local arenaBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     arenaBtn:SetWidth(140); arenaBtn:SetHeight(22)
-    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -268)
+    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -282)
     arenaBtn:SetText("Test Arena HUD")
     arenaBtn:SetScript("OnClick", function()
         arenaActive = not arenaActive
@@ -415,13 +415,20 @@ function WFC.Minimap:BuildPanel()
 
     -- v3.2
     CLine(TEAL .. "v3.2  " .. GOLD .. "(2026-03-08)|r")
-    CLine(WHITE .. "- Free-floating launcher btn (pfUI-safe)|r")
-    CLine(WHITE .. "- Settings / Credits tab panel|r")
+    CLine(WHITE .. "- Minimap button: LibDBIcon-style angle math,|r")
+    CLine(GRAY  .. "  parents to Minimap, shows on PLAYER_LOGIN|r")
+    CLine(WHITE .. "- Faction-aware icon (Alliance/Horde banner)|r")
+    CLine(WHITE .. "- Both clicks open Settings panel|r")
+    CLine(WHITE .. "- EFC map: HP bar removed, pure callout grid|r")
+    CLine(WHITE .. "- EFC map: right-click to lock/unlock position|r")
+    CLine(WHITE .. "- Settings / Credits tabbed panel|r")
     CLine(WHITE .. "- Scrollable changelog|r")
     CLine(WHITE .. "- EFC auto-show now toggle-able|r")
+    CLine(WHITE .. "- Lock/unlock info line above test buttons|r")
     CLine(WHITE .. "- Separate Test WSG HUD / Test Arena HUD buttons|r")
-    CLine(WHITE .. "- Reset All Positions now covers all 3 windows|r")
-    CLine(WHITE .. "- Version bump to 3.2|r")
+    CLine(WHITE .. "- Reset All Positions covers all 3 windows|r")
+    CLine(WHITE .. "- GitHub URL copyable in Credits tab|r")
+    CLine(WHITE .. "- Version 3.2.0|r")
     CLine("")
     -- v3.1 (prior entries)
     CLine(TEAL .. "v3.1  " .. GOLD .. "(2026-03-04 – 2026-03-08)|r")
@@ -474,10 +481,16 @@ function WFC.Minimap:BuildLauncherButton()
     bg:SetTexture("Interface\\Minimap\\UI-Minimap-Background")
     bg:SetPoint("TOPLEFT", 7, -5)
 
-    -- Addon icon — PvP battle flag banner
+    -- Addon icon: faction-aware PvP banner
     local icon = btn:CreateTexture(nil, "ARTWORK")
     icon:SetWidth(17); icon:SetHeight(17)
-    icon:SetTexture("Interface\\Icons\\INV_BannerPVP_01")
+    local iconTex
+    if UnitFactionGroup and UnitFactionGroup("player") == "Horde" then
+        iconTex = "Interface\\Icons\\INV_BannerPVP_02"
+    else
+        iconTex = "Interface\\Icons\\INV_BannerPVP_01"
+    end
+    icon:SetTexture(iconTex)
     icon:SetPoint("TOPLEFT", 7, -6)
 
     btn:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
