@@ -867,12 +867,12 @@ function WFC.Arena:UpdateHUD()
                 row.hpText:SetText("--")
             end
 
-            -- Distance
+            -- Distance  (green=close, yellow=medium, white=far)
             row.distText:SetText("--")
             if TurtlePvPConfig.arenaDistance then
                 local dist = GetDistance(eData.guid)
                 if dist then
-                    if dist <= 20 then row.distText:SetText(string.format("|cffff0000%dy|r", dist))
+                    if dist <= 20 then row.distText:SetText(string.format("|cff00ff00%dy|r", dist))
                     elseif dist <= 40 then row.distText:SetText(string.format("|cffffff00%dy|r", dist))
                     else row.distText:SetText(string.format("%dy", dist)) end
                 end

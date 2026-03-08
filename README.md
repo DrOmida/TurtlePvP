@@ -29,7 +29,7 @@ Automatically activates in Turtle WoW's custom arena zones (Blood Arena, Lordaer
 - Passively discovers enemies from targets, mouseovers, and combat log events — no targeting required.
 - Displays up to 8 enemies simultaneously with:
   - Name in **class colour**
-  - **Distance** colour-coded by range (red ≤20y, yellow ≤40y, white beyond) — requires UnitXP
+  - **Distance** colour-coded by range (green ≤20y, yellow ≤40y, white beyond) — requires UnitXP
   - **HP bar** that shifts green → yellow → red
   - **Trinket indicator** — green when available, turns red for 2 minutes after use. Detects all PvP trinkets and racial abilities (Will of the Forsaken, Stoneform, Escape Artist, Berserking, Blood Fury, War Stomp, Shadowmeld).
   - **Cast bar** with a live countdown timer. Channeled spells show a pulsed orange bar.

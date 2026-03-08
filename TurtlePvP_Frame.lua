@@ -330,7 +330,7 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
             end)
             if success and type(distance) == "number" then
                 if distance <= 20 then
-                    row.distText:SetText(string.format("|cffff0000%d yd|r", distance))
+                    row.distText:SetText(string.format("|cff00ff00%d yd|r", distance))
                 elseif distance <= 40 then
                     row.distText:SetText(string.format("|cffffff00%d yd|r", distance))
                 else
