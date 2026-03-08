@@ -46,10 +46,7 @@ local function GetFactionIdx()
     return (UnitFactionGroup("player") == "Horde") and 2 or 1
 end
 
-local function GetLanguage()
-    local f = UnitFactionGroup("player")
-    return (f == "Horde") and "Orcish" or "Common"
-end
+
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- Lock state updater (called after toggling TurtlePvPConfig.efcLocked)
@@ -150,8 +147,8 @@ end
 -- Public API
 -- ─────────────────────────────────────────────────────────────────────────────
 function WFC.EFCReport:SendLocation(msg)
-    local lang = GetLanguage()
-    SendChatMessage(msg, "Battleground", lang)
+    -- BATTLEGROUND chat uses faction language automatically; no language arg needed
+    SendChatMessage(msg, "BATTLEGROUND")
 end
 
 function WFC.EFCReport:Show()
