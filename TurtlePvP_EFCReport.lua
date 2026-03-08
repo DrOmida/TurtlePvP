@@ -1,9 +1,10 @@
 --[[
 TurtlePvP_EFCReport.lua
-EFC Location Reporter — WSG only
-Adapted from EFCReport by Cubenicke (Yrrol@vanillagaming)
-Integrated into TurtlePvP with Nampower HP bar & restyled frame.
+EFC Location Reporter — WSG only.
+Adapted from EFCReport by Cubenicke (Yrrol@vanillagaming).
 Icons bundled from EFCReport/Icons/*.blp — original artwork by lanevegame.
+HP bar removed: this window is purely a location callout grid.
+Right-click anywhere to toggle lock/unlock (drag when unlocked).
 --]]
 
 WFC.EFCReport = {
@@ -13,7 +14,7 @@ WFC.EFCReport = {
 
 local iconPath = "Interface\\AddOns\\TurtlePvP\\Icons\\"
 
--- 23 WSG location buttons (original EFCReport layout, index [1]=Alliance, [2]=Horde)
+-- 23 WSG location buttons (index [1]=Alliance perspective, [2]=Horde perspective)
 local BUTTONS = {
     { x={2,2},   y={-2,-2},   w=32, h=32, tex="repic28.tga", text="Get ready to repick!" },
     { x={34,34}, y={-2,-194}, w=64, h=32, tex="aroof.blp",   text="EFC Alliance roof!" },
@@ -40,18 +41,32 @@ local BUTTONS = {
     { x={34,34}, y={-194,-2}, w=64, h=32, tex="hroof.blp",   text="EFC Horde roof!" },
 }
 
--- Saved position in TurtlePvPConfig.efcFrameX/Y
 if not TurtlePvPConfig then TurtlePvPConfig = {} end
+
+local function GetFactionIdx()
+    return (UnitFactionGroup("player") == "Horde") and 2 or 1
+end
 
 local function GetLanguage()
     local f = UnitFactionGroup("player")
     return (f == "Horde") and "Orcish" or "Common"
 end
 
-local function GetFactionIdx()
-    return (UnitFactionGroup("player") == "Horde") and 2 or 1
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Lock state updater (called after toggling TurtlePvPConfig.efcLocked)
+-- ─────────────────────────────────────────────────────────────────────────────
+function WFC.EFCReport:UpdateLockState()
+    if not self.frame then return end
+    if TurtlePvPConfig.efcLocked then
+        self.frame.unlockBg:Hide()
+    else
+        self.frame.unlockBg:Show()
+    end
 end
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Create the EFC grid frame
+-- ─────────────────────────────────────────────────────────────────────────────
 function WFC.EFCReport:Create()
     if self.created then return end
     self.created = true
@@ -62,7 +77,7 @@ function WFC.EFCReport:Create()
 
     local frame = CreateFrame("Frame", "TurtlePvPEFCFrame", UIParent)
     frame:SetWidth(132)
-    frame:SetHeight(228 + 22)   -- extra 22px for HP bar at top
+    frame:SetHeight(228)
     frame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", fx, -fy)
     frame:SetBackdrop({
         bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
@@ -76,100 +91,43 @@ function WFC.EFCReport:Create()
     frame:EnableMouse(true)
     frame:SetClampedToScreen(true)
 
-    -- Drag save
-    frame:SetScript("OnMouseDown", function()
-        if arg1 == "LeftButton" then this:StartMoving() end
+    -- Green tint overlay shown when unlocked (same pattern as WSG HUD and Arena HUD)
+    local unlockBg = frame:CreateTexture(nil, "BACKGROUND")
+    unlockBg:SetAllPoints(frame)
+    unlockBg:SetTexture(0, 1, 0, 0.15)
+    frame.unlockBg = unlockBg
+
+    -- Drag: only move when unlocked; right-click toggles lock
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", function()
+        if not TurtlePvPConfig.efcLocked then this:StartMoving() end
     end)
-    frame:SetScript("OnMouseUp", function()
-        if arg1 == "LeftButton" then
-            this:StopMovingOrSizing()
-            local _, _, _, x, y = this:GetPoint()
-            TurtlePvPConfig.efcFrameX = x
-            TurtlePvPConfig.efcFrameY = -y
-        end
+    frame:SetScript("OnDragStop", function()
+        this:StopMovingOrSizing()
+        TurtlePvPConfig.efcFrameX =  this:GetLeft()
+        TurtlePvPConfig.efcFrameY = -this:GetTop() + GetScreenHeight()
     end)
-
-    -- EFC HP bar at top (Nampower-powered) ─────────────────────────────────
-    local barLabel = frame:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    barLabel:SetPoint("TOPLEFT", 4, -4)
-    barLabel:SetText("|cffffff00EFC HP|r")
-
-    local hpBar = CreateFrame("StatusBar", nil, frame)
-    hpBar:SetWidth(118)
-    hpBar:SetHeight(12)
-    hpBar:SetPoint("TOPLEFT", 4, -16)
-    hpBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
-    hpBar:SetStatusBarColor(0, 0.85, 0)
-    hpBar:SetMinMaxValues(0, 100)
-    hpBar:SetValue(100)
-    hpBar.bg = hpBar:CreateTexture(nil, "BACKGROUND")
-    hpBar.bg:SetAllPoints()
-    hpBar.bg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
-    hpBar.bg:SetVertexColor(0.2, 0.2, 0.2, 0.7)
-    frame.hpBar = hpBar
-    frame.barLabel = barLabel
-
-    -- EFC HP ticker
-    local ticker = CreateFrame("Frame")
-    ticker:SetScript("OnUpdate", function()
-        this.elapsed = (this.elapsed or 0) + arg1
-        if this.elapsed < 0.5 then return end
-        this.elapsed = 0
-
-        -- Figure out which carrier is the enemy FC
-        local myFaction = UnitFactionGroup("player")
-        local efcName = nil
-        -- If I am Alliance, the enemy FC is holding the Alliance flag (WFC.allyCarrier)
-        if myFaction == "Alliance" then
-            efcName = WFC.allyCarrier
-        else
-            efcName = WFC.hordeCarrier
-        end
-
-        if not efcName then
-            frame.hpBar:SetValue(0)
-            frame.hpBar:SetStatusBarColor(0.4, 0.4, 0.4)
-            frame.barLabel:SetText("|cff888888EFC: none|r")
-            return
-        end
-
-        local hp, hpMax = nil, nil
-        local guid = WFC.Tracker and WFC.Tracker:GetGUID(efcName) or nil
-        if guid and GetUnitField then
-            hp = GetUnitField(guid, "health")
-            hpMax = GetUnitField(guid, "maxHealth")
-        elseif UnitName("target") == efcName then
-            hp = UnitHealth("target")
-            hpMax = UnitHealthMax("target")
-        end
-
-        if hp and hpMax and hpMax > 0 then
-            local pct = hp / hpMax
-            frame.hpBar:SetMinMaxValues(0, hpMax)
-            frame.hpBar:SetValue(hp)
-            if pct > 0.5 then frame.hpBar:SetStatusBarColor(0, 0.85, 0)
-            elseif pct > 0.25 then frame.hpBar:SetStatusBarColor(1, 0.75, 0)
-            else frame.hpBar:SetStatusBarColor(1, 0.1, 0.1) end
-            frame.barLabel:SetText(string.format("|cffffff00EFC|r %s |cff%s%d%%|r",
-                efcName,
-                pct > 0.5 and "00ff00" or pct > 0.25 and "ffcc00" or "ff3333",
-                math.floor(pct * 100)))
-        else
-            frame.hpBar:SetValue(0)
-            frame.hpBar:SetStatusBarColor(0.4, 0.4, 0.4)
-            frame.barLabel:SetText("|cffffff00EFC|r " .. efcName)
+    frame:RegisterForClicks("RightButtonUp")
+    frame:SetScript("OnClick", function()
+        if arg1 == "RightButton" then
+            TurtlePvPConfig.efcLocked = not TurtlePvPConfig.efcLocked
+            WFC.EFCReport:UpdateLockState()
+            if TurtlePvPConfig.efcLocked then
+                WFC:Print("EFC Map Locked.")
+            else
+                WFC:Print("EFC Map Unlocked. Drag to move, right-click to lock.")
+            end
         end
     end)
-    frame.ticker = ticker
 
-    -- Location buttons ──────────────────────────────────────────────────────
-    for _, btn in ipairs(BUTTONS) do
+    -- Location buttons (pure callout grid, no HP bar offset)
+    for _, def in ipairs(BUTTONS) do
         local b = CreateFrame("Button", nil, frame)
-        b:SetPoint("TOPLEFT", frame, "TOPLEFT", btn.x[ix], btn.y[ix] - 22)  -- -22 for HP bar
-        b:SetWidth(btn.w)
-        b:SetHeight(btn.h)
-        b:SetBackdrop({ bgFile = iconPath .. btn.tex })
-        local desc = btn.text
+        b:SetPoint("TOPLEFT", frame, "TOPLEFT", def.x[ix], def.y[ix])
+        b:SetWidth(def.w)
+        b:SetHeight(def.h)
+        b:SetBackdrop({ bgFile = iconPath .. def.tex })
+        local desc = def.text
         b:SetScript("OnClick", function()
             WFC.EFCReport:SendLocation(desc)
         end)
@@ -181,12 +139,17 @@ function WFC.EFCReport:Create()
         b:SetScript("OnLeave", function() GameTooltip:Hide() end)
     end
 
+    -- Apply initial lock state
+    WFC.EFCReport:UpdateLockState()
+
     frame:Hide()
     self.frame = frame
 end
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Public API
+-- ─────────────────────────────────────────────────────────────────────────────
 function WFC.EFCReport:SendLocation(msg)
-    -- Respect language; also print locally so you see what was sent
     local lang = GetLanguage()
     SendChatMessage(msg, "Battleground", lang)
 end
@@ -206,7 +169,9 @@ function WFC.EFCReport:Toggle()
     if self.enabled then self:Hide() else self:Show() end
 end
 
--- Auto-show in WSG via zone event (hooked into Core's event flow)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Auto-show in WSG
+-- ─────────────────────────────────────────────────────────────────────────────
 local efcZoneFrame = CreateFrame("Frame")
 efcZoneFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 efcZoneFrame:RegisterEvent("PLAYER_ENTERING_WORLD")

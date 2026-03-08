@@ -114,34 +114,30 @@ end
 -- Shared: reset all frame positions
 -- ─────────────────────────────────────────────────────────────────────────────
 function WFC.Minimap:ResetAllPositions()
-    -- WSG HUD: clear saved point and physically move live frame
+    -- WSG HUD (global frame name registered in TurtlePvP_Frame.lua is WSGFCHud)
     TurtlePvPConfig.framePoint = "TOP"
     TurtlePvPConfig.frameX     = 0
     TurtlePvPConfig.frameY     = -150
-    if TurtlePvPHUDFrame then
-        TurtlePvPHUDFrame:ClearAllPoints()
-        TurtlePvPHUDFrame:SetPoint("TOP", UIParent, "TOP", 0, -150)
-    elseif WFC.Frame and WFC.Frame.frame then
-        WFC.Frame.frame:ClearAllPoints()
-        WFC.Frame.frame:SetPoint("TOP", UIParent, "TOP", 0, -150)
+    local wsgHud = getglobal("WSGFCHud")
+    if wsgHud then
+        wsgHud:ClearAllPoints()
+        wsgHud:SetPoint("TOP", UIParent, "TOP", 0, -150)
     end
-    -- Arena HUD: clear saved point and physically move live frame
+    -- Arena HUD (local 'hud' var; disable+re-enable forces reposition from saved config)
     TurtlePvPConfig.arenaFramePoint = "CENTER"
     TurtlePvPConfig.arenaFrameX     = 0
     TurtlePvPConfig.arenaFrameY     = 0
-    if TurtlePvPArenaFrame then
-        TurtlePvPArenaFrame:ClearAllPoints()
-        TurtlePvPArenaFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-    elseif WFC.Arena and WFC.Arena.frame then
-        WFC.Arena.frame:ClearAllPoints()
-        WFC.Arena.frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+    if WFC.Arena and WFC.Arena.enabled then
+        WFC.Arena:Disable()
+        WFC.Arena:Enable()
     end
-    -- EFC Reporter
+    -- EFC Reporter (global frame name is TurtlePvPEFCFrame)
     TurtlePvPConfig.efcFrameX = 400
     TurtlePvPConfig.efcFrameY = 300
-    if TurtlePvPEFCFrame then
-        TurtlePvPEFCFrame:ClearAllPoints()
-        TurtlePvPEFCFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 400, -300)
+    local efcF = getglobal("TurtlePvPEFCFrame")
+    if efcF then
+        efcF:ClearAllPoints()
+        efcF:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 400, -300)
     end
     -- Launcher button
     TurtlePvPConfig.btnX = nil
@@ -266,30 +262,36 @@ function WFC.Minimap:BuildPanel()
             TurtlePvPConfig.efcEnabled = v
             if not v and WFC.EFCReport and WFC.EFCReport.enabled then WFC.EFCReport:Hide() end
         end)
+    AddCheck(sPage, "Lock EFC Map (right-click to unlock)", 32, -120,
+        function() return TurtlePvPConfig.efcLocked end,
+        function(v)
+            TurtlePvPConfig.efcLocked = v
+            if WFC.EFCReport then WFC.EFCReport:UpdateLockState() end
+        end)
 
     local thresh = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    thresh:SetPoint("TOPLEFT", 44, -120)
+    thresh:SetPoint("TOPLEFT", 44, -144)
     thresh:SetText(GRAY .. "HP callout thresholds: 75% / 50% / 25%|r")
 
-    MakeLine(sPage, -134)
+    MakeLine(sPage, -158)
 
     -- ── Arena ─────────────────────────────────────────────────────────────────
-    MakeHeader(sPage, "Arena Enemy HUD", -142)
-    AddCheck(sPage, "Enable Arena Enemy Tracker HUD",      16, -162,
+    MakeHeader(sPage, "Arena Enemy HUD", -166)
+    AddCheck(sPage, "Enable Arena Enemy Tracker HUD",      16, -186,
         function() return TurtlePvPConfig.arenaEnabled end,
         function(v) TurtlePvPConfig.arenaEnabled = v; WFC:CheckZone(true) end)
-    AddCheck(sPage, "Show enemy distance (UnitXP)",        32, -186,
+    AddCheck(sPage, "Show enemy distance (UnitXP)",        32, -210,
         function() return TurtlePvPConfig.arenaDistance end,
         function(v) TurtlePvPConfig.arenaDistance = v end)
-    AddCheck(sPage, "Track trinkets / racials (Nampower)", 32, -210,
+    AddCheck(sPage, "Track trinkets / racials (Nampower)", 32, -234,
         function() return TurtlePvPConfig.arenaTrinkets end,
         function(v) TurtlePvPConfig.arenaTrinkets = v end)
 
     local arenaTip = sPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    arenaTip:SetPoint("TOPLEFT", 44, -234)
+    arenaTip:SetPoint("TOPLEFT", 44, -258)
     arenaTip:SetText(GRAY .. "Auto-activates in PvP Arena zones.|r")
 
-    MakeLine(sPage, -248)
+    MakeLine(sPage, -272)
 
     -- ── Test / Preview buttons ────────────────────────────────────────────────
     local wsgActive   = false
@@ -297,7 +299,7 @@ function WFC.Minimap:BuildPanel()
 
     local wsgBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     wsgBtn:SetWidth(140); wsgBtn:SetHeight(22)
-    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -258)
+    wsgBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 10, -282)
     wsgBtn:SetText("Test WSG HUD")
     wsgBtn:SetScript("OnClick", function()
         wsgActive = not wsgActive
@@ -320,7 +322,7 @@ function WFC.Minimap:BuildPanel()
 
     local arenaBtn = CreateFrame("Button", nil, sPage, "UIPanelButtonTemplate")
     arenaBtn:SetWidth(140); arenaBtn:SetHeight(22)
-    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -258)
+    arenaBtn:SetPoint("TOPLEFT", sPage, "TOPLEFT", 160, -282)
     arenaBtn:SetText("Test Arena HUD")
     arenaBtn:SetScript("OnClick", function()
         arenaActive = not arenaActive
@@ -336,11 +338,11 @@ function WFC.Minimap:BuildPanel()
         end
     end)
 
-    -- ── Bottom utility: reset button sits next to the Credits tab ──────────
+    -- ── Bottom utility:    -- Reset button: sits next to the Credits tab button (100px wide, fits inside 320px panel)
     local rstBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
-    rstBtn:SetWidth(118); rstBtn:SetHeight(20)
-    rstBtn:SetPoint("TOPLEFT", panel, "TOPLEFT", 210, -35)
-    rstBtn:SetText("Reset Positions")
+    rstBtn:SetWidth(100); rstBtn:SetHeight(20)
+    rstBtn:SetPoint("TOPLEFT", panel, "TOPLEFT", 212, -35)
+    rstBtn:SetText("Reset Pos.")
     rstBtn:SetScript("OnClick", function() WFC.Minimap:ResetAllPositions() end)
 
     -- ══════════════════════════════════════════════════════════════════════════
@@ -349,30 +351,50 @@ function WFC.Minimap:BuildPanel()
     local cPage = MakePage()
 
     -- Author block (static, above scroll)
-    local function StaticLine(parent, text, y, font)
+    local function AddLine(parent, text, y, font)
         local fs = parent:CreateFontString(nil, "OVERLAY", font or "GameFontHighlightSmall")
         fs:SetPoint("TOPLEFT", parent, "TOPLEFT", 12, y)
         fs:SetText(text)
         fs:SetJustifyH("LEFT")
     end
 
-    StaticLine(cPage, GOLD .. "Author|r",                                    -4,  "GameFontNormal")
-    StaticLine(cPage, WHITE .. "Adimo|r  " .. GRAY .. "@ Tel'abim|r",       -20)
-    StaticLine(cPage, TEAL .. "github.com/DrOmida/WSGFlagCaller|r",         -34)
+    AddLine(cPage, GOLD .. "Author|r",                                    -4,  "GameFontNormal")
+    AddLine(cPage, WHITE .. "Adimo|r  " .. GRAY .. "@ Tel'abim|r",       -20)
 
-    StaticLine(cPage, GOLD .. "Contributors|r",                              -54, "GameFontNormal")
-    StaticLine(cPage, GRAY .. "EFC concept: Cubenicke (Yrrol@vanillagaming)|r", -70)
-    StaticLine(cPage, GRAY .. "Map icons: lanevegame|r",                    -84)
-    StaticLine(cPage, GRAY .. "Arena frame concept: zetone / byCFM2|r",     -98)
+    -- Copyable GitHub URL via EditBox (click to focus, Ctrl+A to select all)
+    local urlBox = CreateFrame("EditBox", nil, cPage)
+    urlBox:SetWidth(286)
+    urlBox:SetHeight(16)
+    urlBox:SetPoint("TOPLEFT", cPage, "TOPLEFT", 10, -36)
+    urlBox:SetFont("Fonts\\FRIZQT__.TTF", 11)
+    urlBox:SetTextColor(0.33, 0.93, 0.53, 1)
+    urlBox:SetText("github.com/DrOmida/WSGFlagCaller")
+    urlBox:SetAutoFocus(false)
+    urlBox:SetMultiLine(false)
+    urlBox:EnableMouse(true)
+    urlBox:SetBackdrop(nil)
+    urlBox:SetCursorPosition(0)
+    urlBox:SetScript("OnEditFocusGained", function() this:HighlightText() end)
+    urlBox:SetScript("OnEnter", function()
+        GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Click, then Ctrl+A to select & copy", 1,1,1)
+        GameTooltip:Show()
+    end)
+    urlBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
-    StaticLine(cPage, GOLD .. "Changelog|r",                                -118, "GameFontNormal")
+    AddLine(cPage, GOLD .. "Contributors|r",                              -58, "GameFontNormal")
+    AddLine(cPage, GRAY .. "EFC concept: Cubenicke (Yrrol@vanillagaming)|r", -74)
+    AddLine(cPage, GRAY .. "Map icons: lanevegame|r",                    -88)
+    AddLine(cPage, GRAY .. "Arena frame concept: zetone / byCFM2|r",     -102)
 
-    -- Scrollable changelog area (height capped so it never escapes the panel)
-    local scrollH = 148
+    AddLine(cPage, GOLD .. "Changelog|r",                                -122, "GameFontNormal")
+
+    -- Scrollable changelog (height capped so it never overflows the panel bottom)
+    local scrollH = 140
     local scrollFrame = CreateFrame("ScrollFrame", "TurtlePvPCreditsScroll", cPage, "UIPanelScrollFrameTemplate")
     scrollFrame:SetWidth(278)
     scrollFrame:SetHeight(scrollH)
-    scrollFrame:SetPoint("TOPLEFT", cPage, "TOPLEFT", 8, -134)
+    scrollFrame:SetPoint("TOPLEFT", cPage, "TOPLEFT", 8, -138)
 
     local content = CreateFrame("Frame", nil, scrollFrame)
     content:SetWidth(260)
@@ -431,7 +453,8 @@ function WFC.Minimap:BuildLauncherButton()
     btn = CreateFrame("Button", "TurtlePvPLauncherBtn", UIParent)
     btn:SetWidth(32)
     btn:SetHeight(32)
-    btn:SetFrameStrata("HIGH")  -- HIGH so pfUI bars don't cover it
+    btn:SetFrameStrata("HIGH")
+    btn:SetToplevel(true)    -- always renders above pfUI stacking
     btn:SetMovable(true)
     btn:SetClampedToScreen(true)
     btn:EnableMouse(true)
@@ -473,8 +496,14 @@ function WFC.Minimap:BuildLauncherButton()
     else
         btn:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", -250, -25)
     end
-    -- Raise above pfUI frames
+    -- Raise above pfUI frames; small periodic re-raise handles pfUI re-stacking
     btn:Raise()
+    local raiser = CreateFrame("Frame")
+    raiser.t = 0
+    raiser:SetScript("OnUpdate", function()
+        this.t = this.t + arg1
+        if this.t >= 5 then this.t = 0; btn:Raise() end
+    end)
 
     -- Tooltip
     btn:SetScript("OnEnter", function()

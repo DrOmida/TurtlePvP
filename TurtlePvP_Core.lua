@@ -4,6 +4,7 @@ TurtlePvPConfig = TurtlePvPConfig or {
     hpThresholds = {75, 50, 25},
     showFrame = true,
     efcEnabled = true,
+    efcLocked = true,
     arenaEnabled = true,
     arenaDistance = true,
     arenaTrinkets = true,
