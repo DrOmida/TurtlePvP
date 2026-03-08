@@ -22,6 +22,8 @@ mmButton:SetWidth(31)
 mmButton:SetHeight(31)
 mmButton:SetFrameStrata("MEDIUM")
 mmButton:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
+-- Default position: top-right of minimap ring (overridden by SavedVar on VARIABLES_LOADED)
+mmButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(math.rad(45))*80, math.sin(math.rad(45))*80)
 
 local mmBg = mmButton:CreateTexture(nil, "BACKGROUND")
 mmBg:SetAllPoints(mmButton)
