@@ -24,7 +24,7 @@ A live HUD that tracks who has the flag and their distance from you. It also aut
 ![HP Callout in Chat](Screenshots/hp_callout.png)
 
 ### 3. Arena Enemy Tracker HUD
-Automatically activates in Turtle WoW's custom arena zones (Blood Arena, Lordaeron Arena, Sunstrider Court, Blood Ring). It displays your enemies' health, their distance, who they are currently targeting, and what spell they are currently casting. 
+Automatically activates in Turtle WoW's custom arena zones (Blood Arena, Lordaeron Arena, Sunstrider Court, Blood Ring). It displays your enemies' health, their distance, who they are currently targeting, and what spell they are currently casting. Enemies are discovered automatically through nameplates, party targets, and combat log events — no targeting required.
 
 ![Arena Enemy Tracker](Screenshots/arena.png)
 
@@ -43,8 +43,9 @@ To unlock the full power of TurtlePvP, install these optional dependencies:
 |------------|-----------------|
 | **[Nampower](https://twinstar-addons.github.io/addons/nampower/)** | Accurate HP values for enemies out of range or behind objects |
 | **[UnitXP](https://github.com/allfoxwy/UnitXP)** | Precise 3D distance between you and carriers / arena enemies |
+| **[pfUI](https://github.com/shagu/pfUI)** | Enhanced arena cast bars with spell icons, accurate timers, and SuperWoW support |
 
-*The addon works without both, but HP and distance readouts will be limited to whoever you currently have targeted.*
+*The addon works without any of these, but HP, distance, and cast bar readouts will be limited.*
 
 ---
 

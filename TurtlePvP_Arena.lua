@@ -8,9 +8,14 @@
 
 WFC.Arena = { enabled = false }
 
+-- Runtime detection: pfUI's libcast creates global UnitCastingInfo/UnitChannelInfo.
+-- When available, we get accurate cast data + spell icons + SuperWoW support.
+-- When not available, we fall back to our own CAST_TIMES table + combat log parsing.
+local hasPfCast = (UnitCastingInfo ~= nil and UnitChannelInfo ~= nil)
+
 local MAX_ENEMIES   = 8
 local TRINKET_CD    = 120
-local SCAN_INTERVAL = 0.5
+local SCAN_INTERVAL = 0.25
 local ROW_HEIGHT    = 34
 local ROW_GAP       = 36
 
@@ -41,8 +46,10 @@ local TRINKET_TEXTURES = {
     "inv_stone_04", "inv_misc_pocketwatch_01", "spell_nature_regeneration",
 }
 
--- Cast times (seconds) for all PvP-relevant spells.
--- Sourced from 1.12 spell data. 0 = instant (still shown briefly).
+-- Cast times (seconds) for PvP-relevant spells — FALLBACK TABLE.
+-- Only used when pfUI's libcast is NOT loaded (hasPfCast == false).
+-- When pfUI is present, UnitCastingInfo/UnitChannelInfo provide accurate
+-- durations, icons, and SuperWoW support automatically.
 -- Channeled spells are listed in CHANNELED_SPELLS below.
 local CAST_TIMES = {
     -- ── Mage ──
@@ -177,7 +184,10 @@ local CAST_CLEAR_EVENTS = {
     CHAT_MSG_SPELL_HOSTILEPLAYER_AFFDMG  = true,
 }
 
-local SCAN_TOKENS = { "target", "mouseover", "targettarget" }
+local SCAN_TOKENS = {
+    "target", "mouseover", "targettarget",
+    "party1target", "party2target", "party3target", "party4target",
+}
 
 -- ─── Enemy state ─────────────────────────────────────────────────────────────
 local enemies  = {}   -- cleanName -> { guid, hp, hpMax, trinketUsedTime, castingSpell, castStartTime, castDuration }
@@ -354,6 +364,27 @@ for i = 1, MAX_ENEMIES do
     castBarBg:SetAllPoints()
     castBarBg:SetTexture(0.08, 0.02, 0.18, 1)
 
+    -- Spell icon (shown when pfUI provides texture)
+    local castIcon = castBar:CreateTexture(nil, "ARTWORK")
+    castIcon:SetWidth(13); castIcon:SetHeight(13)
+    castIcon:SetPoint("LEFT", castBar, "LEFT", 0, 0)
+    castIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+    castIcon:Hide()
+    row.castIcon = castIcon
+
+    -- Spell name (left-aligned)
+    local castTextLeft = castBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    castTextLeft:SetPoint("LEFT", castBar, "LEFT", 2, 0)
+    castTextLeft:SetJustifyH("LEFT"); castTextLeft:SetText("")
+    row.castTextLeft = castTextLeft
+
+    -- Timer (right-aligned)
+    local castTextRight = castBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    castTextRight:SetPoint("RIGHT", castBar, "RIGHT", -2, 0)
+    castTextRight:SetJustifyH("RIGHT"); castTextRight:SetText("")
+    row.castTextRight = castTextRight
+
+    -- Legacy single centered text (fallback path)
     local castText = castBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     castText:SetAllPoints(); castText:SetJustifyH("CENTER"); castText:SetText("")
     row.castText = castText
@@ -496,6 +527,12 @@ local function RemoveEnemy(rawName)
     WFC:Debug("[Arena] Removed: " .. name)
 end
 
+-- ─── GUID-based discovery (called by Tracker) ───────────────────────────────
+function WFC.Arena:DiscoverFromGUID(name, guid)
+    if not WFC.Arena.enabled then return end
+    AddEnemy(name, guid, true)
+end
+
 -- ─── Scan ────────────────────────────────────────────────────────────────────
 
 local function Scan()
@@ -520,6 +557,25 @@ local function Scan()
                     end
                     -- Note: we intentionally keep last known target if ttToken
                     -- doesn't exist right now (e.g. enemy has no target momentarily)
+                end
+            end
+        end
+    end
+
+    -- Nameplate GUID harvesting (Nampower) — discovers enemies with visible
+    -- nameplates without needing to target or mouseover them.
+    if GetUnitGUID and WorldFrame and WorldFrame.GetChildren then
+        local ok, children = pcall(function() return { WorldFrame:GetChildren() } end)
+        if ok and children then
+            for _, child in ipairs(children) do
+                if child and child.GetName then
+                    local okG, g = pcall(function() return child:GetName(1) end)
+                    if okG and type(g) == "string" and string.len(g) > 2 and string.sub(g, 1, 2) == "0x" then
+                        local n = UnitName(g)
+                        if n and n ~= "Unknown" and UnitIsPlayer(g) and UnitIsEnemy("player", g) then
+                            AddEnemy(n, g, true)
+                        end
+                    end
                 end
             end
         end
@@ -721,7 +777,9 @@ eventFrame:SetScript("OnEvent", function()
 
         AddEnemy(casterName, "", false)
 
-        if enemies[clean] then
+        if enemies[clean] and not hasPfCast then
+            -- Fallback path: write cast state from our own CAST_TIMES table.
+            -- When pfUI is active, UnitCastingInfo handles this automatically.
             if spellName then
                 -- New cast started: record it
                 local cd = CAST_TIMES[spellName]
@@ -732,11 +790,7 @@ eventFrame:SetScript("OnEvent", function()
                 enemies[clean].castDuration  = isChanneled and -1 or cd  -- -1 = channeled
                 enemies[clean].isChanneled   = isChanneled
             else
-                -- Only clear cast bar on events that indicate the cast resolved:
-                --   DAMAGE  = their spell hit (cast finished)
-                --   HITS    = melee swing (not casting)
-                --   MISSES  = melee miss (not casting)
-                -- Do NOT clear on BUFF (buff gained), AURASGONE (buff fell off), PERIODIC (DoT tick).
+                -- Only clear cast bar on events that indicate the cast resolved
                 if CAST_CLEAR_EVENTS[event] then
                     enemies[clean].castingSpell  = nil
                     enemies[clean].castStartTime = 0
@@ -898,49 +952,122 @@ function WFC.Arena:UpdateHUD()
                 row.trinketIcon:SetVertexColor(0.35, 0.35, 0.35)
             end
 
-            -- Cast bar rendering
-            if eData.castingSpell then
-                if eData.castDuration == -1 then
-                    -- Channeled: full bar, pulsing orange tint
-                    row.castBar:SetMinMaxValues(0, 1)
-                    row.castBar:SetValue(1)
-                    row.castBar:SetStatusBarColor(0.9, 0.5, 0.0)
-                    row.castText:SetText("|cffffff00~ " .. eData.castingSpell .. " ~|r")
-                    row.castBar:Show()
-                elseif eData.castDuration > 0 then
-                    local elapsed = now - eData.castStartTime
-                    if elapsed >= eData.castDuration then
-                        -- Cast time expired locally; hide and clear
-                        eData.castingSpell  = nil
-                        eData.castStartTime = 0
-                        eData.castDuration  = 0
-                        row.castBar:Hide()
-                    else
-                        -- Progress 0→1 over cast duration
-                        local pct = elapsed / eData.castDuration
-                        local remaining = eData.castDuration - elapsed
-                        row.castBar:SetMinMaxValues(0, 1)
-                        row.castBar:SetValue(pct)
+            -- Cast bar rendering (dual path: pfUI enhanced vs. fallback)
+            local castShown = false
+
+            -- Helper: hide all cast bar elements
+            local function HideCastBar()
+                row.castBar:Hide()
+                row.castIcon:Hide()
+                row.castTextLeft:SetText("")
+                row.castTextRight:SetText("")
+                row.castText:SetText("")
+            end
+
+            if hasPfCast then
+                -- ── pfUI path: query UnitCastingInfo / UnitChannelInfo ──
+                local castSpell, _, _, castTex, castStart, castEnd = UnitCastingInfo(name)
+                local chanSpell, _, _, chanTex, chanStart, chanEnd = UnitChannelInfo(name)
+
+                if castSpell and castStart and castEnd then
+                    -- Regular cast
+                    local duration = (castEnd - castStart) / 1000
+                    local cur = now - castStart / 1000
+
+                    if duration > 0 and cur >= 0 and cur <= duration then
+                        row.castBar:SetMinMaxValues(0, duration)
+                        row.castBar:SetValue(cur)
                         row.castBar:SetStatusBarColor(0.5, 0.1, 0.8)
-                        row.castText:SetText(string.format("|cffff9900%s|r |cffcccccc%.1fs|r", eData.castingSpell, remaining))
+                        row.castTextLeft:SetText("|cffff9900" .. castSpell .. "|r")
+                        row.castTextRight:SetText(string.format("|cffcccccc%.1f / %.1f|r", cur, duration))
+                        row.castText:SetText("")  -- hide legacy centered text
+                        if castTex then
+                            row.castIcon:SetTexture(castTex)
+                            row.castIcon:Show()
+                            row.castTextLeft:SetPoint("LEFT", row.castIcon, "RIGHT", 2, 0)
+                        else
+                            row.castIcon:Hide()
+                            row.castTextLeft:SetPoint("LEFT", row.castBar, "LEFT", 2, 0)
+                        end
                         row.castBar:Show()
+                        castShown = true
                     end
-                else
-                    -- Instant (castDuration == 0) or unknown: flash briefly then clear
-                    local elapsed = now - eData.castStartTime
-                    if elapsed < 0.6 then
+                elseif chanSpell and chanStart and chanEnd then
+                    -- Channeled
+                    local duration = (chanEnd - chanStart) / 1000
+                    local cur = duration + chanStart / 1000 - now
+                    cur = (cur > duration) and duration or cur
+                    cur = (cur < 0) and 0 or cur
+
+                    row.castBar:SetMinMaxValues(0, duration)
+                    row.castBar:SetValue(cur)
+                    row.castBar:SetStatusBarColor(0.9, 0.5, 0.0)
+                    row.castTextLeft:SetText("|cffffff00~ " .. chanSpell .. " ~|r")
+                    row.castTextRight:SetText(string.format("|cffcccccc%.1f|r", cur))
+                    row.castText:SetText("")
+                    if chanTex then
+                        row.castIcon:SetTexture(chanTex)
+                        row.castIcon:Show()
+                        row.castTextLeft:SetPoint("LEFT", row.castIcon, "RIGHT", 2, 0)
+                    else
+                        row.castIcon:Hide()
+                        row.castTextLeft:SetPoint("LEFT", row.castBar, "LEFT", 2, 0)
+                    end
+                    row.castBar:Show()
+                    castShown = true
+                end
+
+                if not castShown then HideCastBar() end
+            else
+                -- ── Fallback path: own CAST_TIMES table + combat log parsing ──
+                row.castIcon:Hide()
+                row.castTextLeft:SetText("")
+                row.castTextRight:SetText("")
+
+                if eData.castingSpell then
+                    if eData.castDuration == -1 then
+                        -- Channeled: full bar, orange tint
                         row.castBar:SetMinMaxValues(0, 1)
                         row.castBar:SetValue(1)
-                        row.castBar:SetStatusBarColor(1, 0.8, 0)
-                        row.castText:SetText("|cffff9900" .. eData.castingSpell .. "|r")
+                        row.castBar:SetStatusBarColor(0.9, 0.5, 0.0)
+                        row.castText:SetText("|cffffff00~ " .. eData.castingSpell .. " ~|r")
                         row.castBar:Show()
+                        castShown = true
+                    elseif eData.castDuration > 0 then
+                        local elapsed = now - eData.castStartTime
+                        if elapsed >= eData.castDuration then
+                            eData.castingSpell  = nil
+                            eData.castStartTime = 0
+                            eData.castDuration  = 0
+                            HideCastBar()
+                        else
+                            local pct = elapsed / eData.castDuration
+                            local remaining = eData.castDuration - elapsed
+                            row.castBar:SetMinMaxValues(0, 1)
+                            row.castBar:SetValue(pct)
+                            row.castBar:SetStatusBarColor(0.5, 0.1, 0.8)
+                            row.castText:SetText(string.format("|cffff9900%s|r |cffcccccc%.1fs|r", eData.castingSpell, remaining))
+                            row.castBar:Show()
+                            castShown = true
+                        end
                     else
-                        eData.castingSpell = nil
-                        row.castBar:Hide()
+                        -- Instant: flash briefly
+                        local elapsed = now - eData.castStartTime
+                        if elapsed < 0.6 then
+                            row.castBar:SetMinMaxValues(0, 1)
+                            row.castBar:SetValue(1)
+                            row.castBar:SetStatusBarColor(1, 0.8, 0)
+                            row.castText:SetText("|cffff9900" .. eData.castingSpell .. "|r")
+                            row.castBar:Show()
+                            castShown = true
+                        else
+                            eData.castingSpell = nil
+                            HideCastBar()
+                        end
                     end
+                else
+                    HideCastBar()
                 end
-            else
-                row.castBar:Hide()
             end
 
             -- Target line (line 2, under name — stops at HP bar left edge)

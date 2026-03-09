@@ -66,4 +66,24 @@ frame:SetScript("OnEvent", function()
         -- arg3 = casterGuid
         WFC.Tracker:ProcessGUID(arg3)
     end
+
+    -- Feed GUID-based discoveries into Arena if active
+    if WFC.Arena and WFC.Arena.enabled and WFC.Arena.DiscoverFromGUID then
+        local guid = nil
+        if event == "UNIT_HEALTH_GUID" or event == "UNIT_AURA_GUID" then
+            guid = arg1
+        elseif event == "SPELL_START_OTHER" then
+            guid = arg3
+        elseif event == "UPDATE_MOUSEOVER_UNIT" and GetUnitGUID then
+            guid = GetUnitGUID("mouseover")
+        elseif event == "PLAYER_TARGET_CHANGED" and GetUnitGUID then
+            guid = GetUnitGUID("target")
+        end
+        if guid then
+            local n = UnitName(guid)
+            if n and n ~= "Unknown" and n ~= "" and UnitIsPlayer(guid) and UnitIsEnemy("player", guid) then
+                WFC.Arena:DiscoverFromGUID(n, guid)
+            end
+        end
+    end
 end)
