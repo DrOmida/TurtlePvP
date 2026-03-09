@@ -8,16 +8,17 @@
 
 WFC.Arena = { enabled = false }
 
--- Runtime detection: pfUI's libcast creates global UnitCastingInfo/UnitChannelInfo.
--- When available, we get accurate cast data + spell icons + SuperWoW support.
--- When not available, we fall back to our own CAST_TIMES table + combat log parsing.
--- NOTE: pfUI registers these globals AFTER addon load (inside RegisterModule),
--- so we check lazily on first use rather than at file parse time.
+-- Runtime detection: pfUI's libcast exposes cast data via pfUI.api.libcast.db.
+-- NOTE: pfUI uses setfenv() so UnitCastingInfo/UnitChannelInfo are NOT in _G;
+-- they live inside pfUI's sandboxed environment. We access libcast.db directly.
 local hasPfCast = nil  -- nil = not yet checked
+local libcastDb = nil  -- reference to pfUI.api.libcast.db
+
 local function CheckPfCast()
     if hasPfCast == nil then
-        hasPfCast = (UnitCastingInfo ~= nil and UnitChannelInfo ~= nil)
+        hasPfCast = (pfUI ~= nil and pfUI.api ~= nil and pfUI.api.libcast ~= nil and pfUI.api.libcast.db ~= nil)
         if hasPfCast then
+            libcastDb = pfUI.api.libcast.db
             WFC:Debug("[Arena] pfUI libcast detected — using enhanced cast bars.")
         else
             WFC:Debug("[Arena] pfUI libcast not found — using fallback CAST_TIMES table.")
@@ -25,6 +26,27 @@ local function CheckPfCast()
     end
     return hasPfCast
 end
+
+-- Read cast data from pfUI's libcast database (mirrors UnitCastingInfo return values)
+local function GetPfCastInfo(name)
+    if not libcastDb or not name then return nil end
+    local db = libcastDb[name]
+    if not db or not db.cast or not db.start or not db.casttime then return nil end
+    -- Check if cast is still active
+    if db.start + db.casttime / 1000 <= GetTime() then return nil end
+    if db.channel then return nil end  -- not a regular cast
+    return db.cast, db.rank or "", "", db.icon, db.start * 1000, db.start * 1000 + db.casttime
+end
+
+local function GetPfChannelInfo(name)
+    if not libcastDb or not name then return nil end
+    local db = libcastDb[name]
+    if not db or not db.cast or not db.start or not db.casttime then return nil end
+    if db.start + db.casttime / 1000 <= GetTime() then return nil end
+    if not db.channel then return nil end  -- not a channel
+    return db.cast, db.rank or "", "", db.icon, db.start * 1000, db.start * 1000 + db.casttime
+end
+
 local MAX_ENEMIES   = 8
 local TRINKET_CD    = 120
 local SCAN_INTERVAL = 0.25
@@ -987,9 +1009,9 @@ function WFC.Arena:UpdateHUD()
             end
 
             if CheckPfCast() then
-                -- ── pfUI path: query UnitCastingInfo / UnitChannelInfo ──
-                local castSpell, _, _, castTex, castStart, castEnd = UnitCastingInfo(name)
-                local chanSpell, _, _, chanTex, chanStart, chanEnd = UnitChannelInfo(name)
+                -- ── pfUI path: read from pfUI.api.libcast.db ──
+                local castSpell, _, _, castTex, castStart, castEnd = GetPfCastInfo(name)
+                local chanSpell, _, _, chanTex, chanStart, chanEnd = GetPfChannelInfo(name)
 
                 if castSpell and castStart and castEnd then
                     -- Regular cast
