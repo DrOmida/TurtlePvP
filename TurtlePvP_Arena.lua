@@ -464,8 +464,15 @@ end
 local function IsAlly(cleanName)
     if not cleanName then return false end
     if CleanName(UnitName("player")) == cleanName then return true end
+    -- Check party members
     for j = 1, 4 do
         local token = "party" .. j
+        if UnitExists(token) and CleanName(UnitName(token)) == cleanName then return true end
+    end
+    -- Check raid members (Turtle WoW arenas allow mixed Horde/Alliance teams)
+    local numRaid = GetNumRaidMembers() or 0
+    for j = 1, numRaid do
+        local token = "raid" .. j
         if UnitExists(token) and CleanName(UnitName(token)) == cleanName then return true end
     end
     return false
