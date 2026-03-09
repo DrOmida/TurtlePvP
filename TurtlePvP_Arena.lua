@@ -49,7 +49,8 @@ end
 
 local MAX_ENEMIES   = 8
 local TRINKET_CD    = 120
-local SCAN_INTERVAL = 0.25
+local SCAN_INTERVAL      = 0.25
+local PREP_SCAN_INTERVAL = 0.1   -- faster scanning during arena prep phase
 local ROW_HEIGHT    = 34
 local ROW_GAP       = 36
 
@@ -544,8 +545,10 @@ local function AddEnemy(rawName, guid, fromUnitToken)
     if fromUnitToken then
         confirmedPlayers[name] = true
     else
-        -- Combat log: only add if already confirmed as real player via unit token
-        if not confirmedPlayers[name] then return end
+        -- In arena, trust combat log names directly (controlled environment,
+        -- no random NPCs — LooksLikeNPC already filters pets/totems).
+        -- Outside arena, require unit token confirmation first.
+        if not WFC.Arena.enabled and not confirmedPlayers[name] then return end
     end
     if enemies[name] then
         if guid and guid ~= "" then enemies[name].guid = guid end
@@ -793,6 +796,7 @@ eventFrame:SetScript("OnEvent", function()
             TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
+            WFC.Arena.inPrepPhase = false
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
         elseif string.find(lower, "team wins") then
             WFC:Print("|cffffff00Arena Match Ended!|r"); WFC.Arena:Reset()
@@ -805,6 +809,7 @@ eventFrame:SetScript("OnEvent", function()
             TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
+            WFC.Arena.inPrepPhase = false
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
         elseif string.find(lower, "team wins") then
             WFC:Print("|cffffff00Arena Match Ended!|r"); WFC.Arena:Reset()
@@ -859,6 +864,7 @@ end)
 function WFC.Arena:Enable()
     if WFC.Arena.enabled then return end
     WFC.Arena.enabled = true
+    WFC.Arena.inPrepPhase = true  -- fast scanning until "battle has begun"
 
     hud:ClearAllPoints()
     hud:SetPoint(
@@ -889,7 +895,8 @@ function WFC.Arena:Enable()
         hud.ticker = CreateFrame("Frame")
         hud.ticker:SetScript("OnUpdate", function()
             this.elapsed = (this.elapsed or 0) + arg1
-            if this.elapsed >= SCAN_INTERVAL then
+            local interval = WFC.Arena.inPrepPhase and PREP_SCAN_INTERVAL or SCAN_INTERVAL
+            if this.elapsed >= interval then
                 this.elapsed = 0
                 if WFC.Arena.enabled then Scan(); WFC.Arena:UpdateHUD() end
             end
