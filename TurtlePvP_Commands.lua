@@ -66,5 +66,33 @@ SlashCmdList["TURTLEPVP"] = function(msg)
         WFC:Print("WSG Caller: " .. onOffStr(TurtlePvPConfig.wsgEnabled))
         WFC:Print("Arena HUD: " .. onOffStr(TurtlePvPConfig.arenaEnabled))
         WFC:Print("Debug: " .. onOffStr(TurtlePvPConfig.debug))
+    elseif cmd == "arenalog" then
+        if args[2] == "on" then
+            TurtlePvPConfig.arenaLogEnabled = true
+            WFC:Print("|cffffff00Arena diagnostic logging ENABLED.|r Log will save to SavedVariables.")
+        elseif args[2] == "off" then
+            TurtlePvPConfig.arenaLogEnabled = false
+            WFC:Print("Arena diagnostic logging disabled.")
+        elseif args[2] == "clear" then
+            TurtlePvPArenaLog = {}
+            WFC:Print("Arena log cleared.")
+        elseif args[2] == "dump" then
+            -- Print last 20 entries to chat
+            local total = TurtlePvPArenaLog and table.getn(TurtlePvPArenaLog) or 0
+            WFC:Print("|cffffff00Arena Log: " .. total .. " entries total. Last 20:|r")
+            local start = total > 20 and (total - 19) or 1
+            for i = start, total do
+                WFC:Print(TurtlePvPArenaLog[i])
+            end
+        else
+            local count = TurtlePvPArenaLog and table.getn(TurtlePvPArenaLog) or 0
+            local on = TurtlePvPConfig.arenaLogEnabled and "|cff00ff00ON|r" or "|cffff0000OFF|r"
+            WFC:Print("Arena log: " .. on .. " | " .. count .. " entries saved")
+            WFC:Print("  /tpvp arenalog on    — start logging")
+            WFC:Print("  /tpvp arenalog off   — stop logging")
+            WFC:Print("  /tpvp arenalog dump  — show last 20 entries")
+            WFC:Print("  /tpvp arenalog clear — clear all entries")
+            WFC:Print("  Log saves to: WTF/.../SavedVariables/TurtlePvP.lua (TurtlePvPArenaLog)")
+        end
     end
 end

@@ -8,6 +8,26 @@
 
 WFC.Arena = { enabled = false }
 
+-- ─── Arena diagnostic logger ────────────────────────────────────────────────
+-- Saves all discovery events to TurtlePvPArenaLog (SavedVariables) for analysis.
+-- Enable with: /tpvp arenalog on    Disable: /tpvp arenalog off
+-- View count: /tpvp arenalog        Clear: /tpvp arenalog clear
+TurtlePvPArenaLog = TurtlePvPArenaLog or {}
+-- TurtlePvPArenaLog = TurtlePvPArenaLog or {}
+local arenaLogSession = 0  -- incremented each arena Enable()
+local arenaLogStartTime = 0
+
+local function ArenaLog(source, detail)
+    if not TurtlePvPConfig.arenaLogEnabled then return end
+    local elapsed = GetTime() - arenaLogStartTime
+    local entry = string.format("[S%d +%.1fs] %s: %s", arenaLogSession, elapsed, source, detail)
+    table.insert(TurtlePvPArenaLog, entry)
+    -- Cap at 500 entries to avoid SavedVariables bloat
+    if table.getn(TurtlePvPArenaLog) > 500 then
+        table.remove(TurtlePvPArenaLog, 1)
+    end
+end
+
 -- Runtime detection: pfUI's libcast exposes cast data via pfUI.api.libcast.db.
 -- NOTE: pfUI uses setfenv() so UnitCastingInfo/UnitChannelInfo are NOT in _G;
 -- they live inside pfUI's sandboxed environment. We access libcast.db directly.
@@ -540,15 +560,27 @@ end
 local function AddEnemy(rawName, guid, fromUnitToken)
     local name = CleanName(rawName)
     if not name or IsAlly(name) then return end
-    if LooksLikeNPC(name) then return end  -- blocks totems/pets by name pattern
+    if LooksLikeNPC(name) then
+        ArenaLog("REJECT_NPC", name .. " (looks like NPC)")
+        return
+    end
 
     if fromUnitToken then
+        if not confirmedPlayers[name] then
+            ArenaLog("CONFIRM", name .. " via unit token" .. (guid and guid ~= "" and " guid=" .. guid or ""))
+        end
         confirmedPlayers[name] = true
     else
         -- In arena, trust combat log names directly (controlled environment,
         -- no random NPCs — LooksLikeNPC already filters pets/totems).
         -- Outside arena, require unit token confirmation first.
-        if not WFC.Arena.enabled and not confirmedPlayers[name] then return end
+        if not WFC.Arena.enabled and not confirmedPlayers[name] then
+            ArenaLog("REJECT_UNCONFIRMED", name .. " (not in arena, no unit token)")
+            return
+        end
+        if not confirmedPlayers[name] then
+            ArenaLog("ARENA_TRUST", name .. " (combat log, no unit token — arena mode)")
+        end
     end
     if enemies[name] then
         if guid and guid ~= "" then enemies[name].guid = guid end
@@ -561,6 +593,7 @@ local function AddEnemy(rawName, guid, fromUnitToken)
         targeting = nil,   -- name of who this enemy is targeting (or nil if unknown)
     }
     table.insert(nameList, name)
+    ArenaLog("DISCOVERED", name .. " (source=" .. (fromUnitToken and "unittoken" or "combatlog") .. ", guid=" .. (guid or "nil") .. ")")
     WFC:Debug("[Arena] Added: " .. name)
 end
 
@@ -577,6 +610,7 @@ end
 -- ─── GUID-based discovery (called by Tracker) ───────────────────────────────
 function WFC.Arena:DiscoverFromGUID(name, guid)
     if not WFC.Arena.enabled then return end
+    ArenaLog("TRACKER", name .. " guid=" .. (guid or "nil"))
     AddEnemy(name, guid, true)
 end
 
@@ -620,6 +654,7 @@ local function Scan()
                     if okG and type(g) == "string" and string.len(g) > 2 and string.sub(g, 1, 2) == "0x" then
                         local n = UnitName(g)
                         if n and n ~= "Unknown" and UnitIsPlayer(g) and UnitIsEnemy("player", g) then
+                            ArenaLog("NAMEPLATE", n .. " guid=" .. g)
                             AddEnemy(n, g, true)
                         end
                     end
@@ -796,6 +831,7 @@ eventFrame:SetScript("OnEvent", function()
             TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
+            ArenaLog("MATCH", "Battle has begun! Ending prep phase.")
             WFC.Arena.inPrepPhase = false
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
         elseif string.find(lower, "team wins") then
@@ -809,6 +845,7 @@ eventFrame:SetScript("OnEvent", function()
             TriggerPullTimer()
         end
         if string.find(lower, "battle has begun") then
+            ArenaLog("MATCH", "Battle has begun! (monster yell) Ending prep phase.")
             WFC.Arena.inPrepPhase = false
             WFC.Arena:Reset(); WFC:Print("|cffffff00Arena Match Started!|r")
         elseif string.find(lower, "team wins") then
@@ -820,6 +857,8 @@ eventFrame:SetScript("OnEvent", function()
 
         local casterName, spellName = ParseMsg(arg1)
         if not casterName then return end
+
+        ArenaLog("COMBATLOG", event .. ": " .. (casterName or "?") .. " spell=" .. (spellName or "none"))
 
         local clean = CleanName(casterName)
         if not clean or string.len(clean) < 2 then return end
@@ -865,6 +904,9 @@ function WFC.Arena:Enable()
     if WFC.Arena.enabled then return end
     WFC.Arena.enabled = true
     WFC.Arena.inPrepPhase = true  -- fast scanning until "battle has begun"
+    arenaLogSession = arenaLogSession + 1
+    arenaLogStartTime = GetTime()
+    ArenaLog("ENABLE", "Arena enabled. Session " .. arenaLogSession .. ", prep phase ON, hasPfCast=" .. tostring(CheckPfCast()))
 
     hud:ClearAllPoints()
     hud:SetPoint(
