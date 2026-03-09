@@ -66,5 +66,18 @@ SlashCmdList["TURTLEPVP"] = function(msg)
         WFC:Print("WSG Caller: " .. onOffStr(TurtlePvPConfig.wsgEnabled))
         WFC:Print("Arena HUD: " .. onOffStr(TurtlePvPConfig.arenaEnabled))
         WFC:Print("Debug: " .. onOffStr(TurtlePvPConfig.debug))
+    elseif cmd == "arenasay" then
+        if args[2] == "on" then
+            TurtlePvPConfig.arenaAnnounceTrinkets = true
+            WFC:Print("|cffffff00Arena Trinket /say Announcing ENABLED.|r")
+        elseif args[2] == "off" then
+            TurtlePvPConfig.arenaAnnounceTrinkets = false
+            WFC:Print("Arena Trinket /say Announcing disabled.")
+        else
+            local on = TurtlePvPConfig.arenaAnnounceTrinkets and "|cff00ff00ON|r" or "|cffff0000OFF|r"
+            WFC:Print("Arena trinket say announcer is: " .. on)
+            WFC:Print("  /tpvp arenasay on   — start announcing")
+            WFC:Print("  /tpvp arenasay off  — stop announcing")
+        end
     end
 end

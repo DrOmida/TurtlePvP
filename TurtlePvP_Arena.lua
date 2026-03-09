@@ -266,7 +266,29 @@ dragHandle:RegisterForClicks("RightButtonUp")
 
 local titleText = dragHandle:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
 titleText:SetPoint("CENTER", dragHandle, "CENTER", 0, 0)
-titleText:SetText("|cffffd700Arena Enemies|r")
+
+function WFC.Arena:UpdateArenaTitle()
+    local wins = TurtlePvPConfig.arenaWins or 0
+    local losses = TurtlePvPConfig.arenaLosses or 0
+    titleText:SetText(string.format("|cffffd700Arena|r  |cff00ff00W: %d|r - |cffff0000L: %d|r", wins, losses))
+end
+WFC.Arena:UpdateArenaTitle()
+
+local resetBtn = CreateFrame("Button", nil, dragHandle)
+resetBtn:SetWidth(16); resetBtn:SetHeight(16)
+resetBtn:SetPoint("RIGHT", dragHandle, "RIGHT", -4, 0)
+local resetText = resetBtn:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+resetText:SetPoint("CENTER", resetBtn, "CENTER", 0, 0)
+resetText:SetText("[R]")
+resetText:SetTextColor(0.6, 0.6, 0.6, 1)
+resetBtn:SetScript("OnEnter", function() resetText:SetTextColor(1, 1, 1, 1) end)
+resetBtn:SetScript("OnLeave", function() resetText:SetTextColor(0.6, 0.6, 0.6, 1) end)
+resetBtn:SetScript("OnClick", function()
+    TurtlePvPConfig.arenaWins = 0
+    TurtlePvPConfig.arenaLosses = 0
+    WFC.Arena:UpdateArenaTitle()
+    WFC:Print("Arena Win/Loss record reset.")
+end)
 
 dragHandle:SetScript("OnDragStart", function()
     if not TurtlePvPConfig.arenaLocked then hud:StartMoving() end
@@ -666,6 +688,10 @@ local function MarkTrinketUsed(rawName, spellName)
     if e.trinketUsedTime > 0 and (GetTime() - e.trinketUsedTime) < 5 then return end
     e.trinketUsedTime = GetTime()
     WFC:Print("|cffff4400[Arena]|r " .. name .. " used |cffffd700" .. (spellName or "trinket") .. "|r!")
+
+    if TurtlePvPConfig.arenaAnnounceTrinkets then
+        SendChatMessage(name .. " used " .. (spellName or "their trinket") .. "!", "SAY")
+    end
 end
 
 local function ScanBuffsForTrinket(token, name)
@@ -810,6 +836,21 @@ eventFrame:SetScript("OnEvent", function()
             WFC:Print("|cffffff00Arena Match Ended!|r"); WFC.Arena:Reset()
         end
 
+    elseif event == "CHAT_MSG_LOOT" then
+        if not arg1 then return end
+        local lower = string.lower(arg1)
+        -- Detect "[Arena Mark of Honor]"
+        if string.find(lower, "arena mark of honor") then
+            if string.find(lower, "x3") or string.find(lower, "x 3") then
+                TurtlePvPConfig.arenaWins = (TurtlePvPConfig.arenaWins or 0) + 1
+                WFC:Print("|cff00ff00[Arena] You won! Win recorded.|r")
+            else
+                TurtlePvPConfig.arenaLosses = (TurtlePvPConfig.arenaLosses or 0) + 1
+                WFC:Print("|cffff0000[Arena] You lost. Loss recorded.|r")
+            end
+            WFC.Arena:UpdateArenaTitle()
+        end
+
     else
         if not arg1 then return end
 
@@ -882,6 +923,7 @@ function WFC.Arena:Enable()
     eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
     eventFrame:RegisterEvent("CHAT_MSG_MONSTER_EMOTE")
     eventFrame:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
+    eventFrame:RegisterEvent("CHAT_MSG_LOOT")
 
     WFC.Arena:Reset()
 
