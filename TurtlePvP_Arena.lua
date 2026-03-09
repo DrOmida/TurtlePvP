@@ -46,11 +46,14 @@ local FIXED_RIGHT_W = DIST_W + COL_GAP + TRINKET_W + COL_GAP + HPBAR_W + RIGHT_P
 local TRINKET_ICON = "Interface\\Icons\\INV_Jewelry_TrinketPVP_02"
 
 local TRINKET_SPELL_NAMES = {
+    -- PvP trinkets (short keywords catch Turtle WoW naming variants)
     "Insignia of the Alliance", "Insignia of the Horde",
     "Medallion of the Alliance", "Medallion of the Horde",
+    "PvP Trinket", "Will to Survive",
+    -- Racial abilities that break CC
     "Will of the Forsaken", "Stoneform", "Escape Artist",
     "Perception", "Berserking", "Blood Fury", "War Stomp",
-    "Shadowmeld", "PvP Trinket",
+    "Shadowmeld",
 }
 
 local TRINKET_TEXTURES = {
