@@ -1,71 +1,37 @@
 # <span style="color:#00ff7f">Turtle</span>PvP
 
-A versatile PvP utility suite tailored for Turtle WoW, providing an intelligent HUD, passive enemy tracking, and rapid tactical reporting across Warsong Gulch and Custom Arenas.
+A versatile PvP utility suite explicitly built for **Turtle WoW**. It provides an intelligent HUD, passive enemy tracking, and rapid tactical reporting to enhance your gameplay in battlegrounds and arenas.
 
-> **Author:** Adimo @ Tel'abim  
+> **Author:** Adimo [Tel'abim]  
 > **Version:** 3.2  
 > **GitHub:** https://github.com/DrOmida/TurtlePvP
 
 ---
 
-## Features
+## The Three Core Functions
 
-### 🏴 Warsong Gulch Flag Tracker
-- Live HUD displaying the HP and distance to both Flag Carriers.
-- Automatic `/bg` callouts when the enemy FC's health hits **75%, 50%, and 25%**.
-- Zero-config auto-recovery via passive buffs — picks up missed carriers automatically.
-- Anti-spam sync via Addon Messages — only one player calls out at a time, Adimo gets priority.
-- Silenced automatically when under **Curse of Tongues**.
+TurtlePvP comes with three main systems. All options are fully modular and can be toggled on or off! To access the settings menu, simply type `/tpvp` in chat or click the minimap button.
 
-### 📍 EFC Location Reporter
-- A dedicated grid of **23 location buttons** tailored to Warsong Gulch.
-- Click a location button to instantly announce the EFC position in Battleground chat.
-- Automatically uses **Common** (Alliance) or **Orcish** (Horde) depending on your faction.
-- Auto-shows when you enter Warsong Gulch (can be disabled in Settings).
+### 1. EFC Location Reporter
+A dedicated grid of 23 location buttons tailored to Warsong Gulch. Click any location button to instantly announce the Enemy Flag Carrier's (EFC) position in Battleground chat (automatically uses Common or Orcish depending on your faction). 
 
-### ⚔️ Arena Enemy Tracker HUD
-Automatically activates in Turtle WoW's custom arena zones (Blood Arena, Lordaeron Arena, Sunstrider Court, Blood Ring).
+![EFC Location Reporter](Screenshots/efc_caller.png)
 
-- Passively discovers enemies from targets, mouseovers, and combat log events — no targeting required.
-- Displays up to 8 enemies simultaneously with:
-  - Name in **class colour**
-  - **Distance** colour-coded by range (green ≤20y, yellow ≤40y, white beyond) — requires UnitXP
-  - **HP bar** that shifts green → yellow → red
-  - **Trinket indicator** — green when available, turns red for 2 minutes after use. Detects all PvP trinkets and racial abilities (Will of the Forsaken, Stoneform, Escape Artist, Berserking, Blood Fury, War Stomp, Shadowmeld).
-  - **Cast bar** with a live countdown timer. Channeled spells show a pulsed orange bar.
-  - **Target indicator** — red if targeting you, orange if targeting a teammate, blue if targeting someone else.
-- Dynamic HUD width — resizes to fit the longest enemy name.
-- Pull timer — when the arena announces "Fifteen seconds until the battle begins!", automatically triggers `/pull 15`.
-- Totem and pet filtering — only real players are tracked.
+### 2. Warsong Gulch Flag Tracker
+A live HUD that tracks who has the flag and their distance from you. It also automatically broadcasts `/bg` callouts when the enemy FC's health drops to 75%, 50%, and 25%. This relies on auto-recovery via passive buffs and prevents spam with intelligent AddonMessage syncing.
 
-### 🖱️ Minimap Button
-- Sits on the Minimap ring (just like standard WoW addon buttons).
-- Shows the **Alliance or Horde PvP banner** depending on your faction.
-- **Click** to open the Settings panel.
-- **Drag** to reposition it around the Minimap edge. Position is saved between sessions.
+![FC Tracker info](Screenshots/fc_tracker.png)
+![HP Callout in Chat](Screenshots/hp_callout.png)
 
-### ⚙️ Settings Panel
-- Tabbed interface: **Settings** tab and **Credits** tab.
-- Toggle individual features: WSG tracking, HP callouts, Flag Tracker HUD, EFC map, Arena HUD, distance, trinkets.
-- **Test WSG HUD** and **Test Arena HUD** buttons to preview HUDs outside of PvP zones.
-- **Reset Pos.** button resets all windows and the minimap button to their default positions.
-- **Right-click any HUD** to lock or unlock its position (prevents accidental dragging).
+### 3. Arena Enemy Tracker HUD
+Automatically activates in Turtle WoW's custom arena zones (Blood Arena, Lordaeron Arena, Sunstrider Court, Blood Ring). It displays your enemies' health, their distance, who they are currently targeting, and what spell they are currently casting. 
+
+![Arena Enemy Tracker](Screenshots/arena.png)
 
 ---
 
-## How It Works
-
-### Starting Up
-Load into the game — the addon initialises automatically. The minimap button appears on your minimap ring after login.
-
-### Warsong Gulch
-The WSG Flag Tracker activates automatically when you enter Warsong Gulch. It scans combat logs, buffs, and nearby unit tooltips to identify who is carrying the flag. The EFC Reporter grid also opens (if enabled), allowing you to call the EFC's location with a single click.
-
-### Arena
-The Arena HUD activates automatically when you enter a recognised arena zone. It passively builds a list of enemies from your targets, mouseovers, and combat events without you needing to interact with it.
-
-### Locking / Unlocking Windows
-All three HUD windows (WSG Flag Caller, Arena Enemy HUD, EFC Location Map) can be locked to prevent accidental dragging. **Right-click anywhere on a HUD** to toggle its lock state. An unlocked HUD shows a subtle green tint while being draggable.
+## Menu & Settings
+Use the `/tpvp` command to open the TurtlePvP menu. From here, you can toggle every single module on or off independently. You can also right-click any of the HUDs in-game to unlock them, drag them to your preferred position, and right-click them again to lock them in place.
 
 ---
 
@@ -82,20 +48,6 @@ To unlock the full power of TurtlePvP, install these optional dependencies:
 
 ---
 
-## Slash Commands
-
-Only the essential debug and override commands remain — everything else is controlled through the **Settings panel** (minimap button or `/tpvp`).
-
-| Command | Description |
-|---------|-------------|
-| `/tpvp` or `/turtlepvp` | Open / close the Settings panel |
-| `/tpvp reset` | Reset all frame positions to defaults |
-| `/tpvp status` | Print module and dependency status to chat |
-| `/tpvp debug on/off` | Toggle internal debug output |
-
----
-
-## Credits & Thanks
-- EFC Reporter based on the original concept by **Cubenicke (Yrrol@vanillagaming)**.
-- Original map positioning layout and location icons by **lanevegame**.
-- Arena enemy detection approach inspired by enemyFrames by **zetone/byCFM2**.
+## Credits
+- **Adimo [Tel'abim]** - Author
+- **Cubenicke** - EFC Reporter concept (https://github.com/cubenicke/EFCReport)

@@ -314,9 +314,9 @@ function WFC.Minimap:BuildPanel()
     urlBox:SetScript("OnLeave", function() GameTooltip:Hide() end)
 
     AddLine(cPage, GOLD .. "Contributors|r",                              -58, "GameFontNormal")
-    AddLine(cPage, GRAY .. "EFC concept: Cubenicke (Yrrol@vanillagaming)|r", -74)
-    AddLine(cPage, GRAY .. "Map icons: lanevegame|r",                    -88)
-    AddLine(cPage, GRAY .. "Arena frame concept: zetone / byCFM2|r",     -102)
+    AddLine(cPage, GRAY .. "Author: Adimo [Tel'abim]|r",                 -74)
+    AddLine(cPage, GRAY .. "EFC concept: Cubenicke|r",                   -88)
+    AddLine(cPage, GRAY .. "github.com/cubenicke/EFCReport|r",           -102)
 
     AddLine(cPage, GOLD .. "Changelog|r",                                -122, "GameFontNormal")
 
