@@ -807,8 +807,22 @@ end
 
 eventFrame:SetScript("OnEvent", function()
     if not WFC.Arena.enabled then return end
-
-    if event == "UNIT_DIED" then
+    if event == "UPDATE_BATTLEFIELD_SCORE" then
+        local num = GetNumBattlefieldScores()
+        for i = 1, num do
+            local name = GetBattlefieldScore(i)
+            if name then
+                local clean = CleanName(name)
+                if clean and not IsAlly(clean) then
+                    if not enemies[clean] then
+                        ArenaLog("SCOREBOARD", clean)
+                        AddEnemy(name, "", true)
+                    end
+                end
+            end
+        end
+        return
+    elseif event == "UNIT_DIED" then
         local deadName = nil
         if arg1 then
             if UnitExists(arg1) then deadName = UnitName(arg1) end
@@ -930,6 +944,7 @@ function WFC.Arena:Enable()
     eventFrame:RegisterEvent("CHAT_MSG_MONSTER_YELL")
     eventFrame:RegisterEvent("CHAT_MSG_MONSTER_EMOTE")
     eventFrame:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
+    eventFrame:RegisterEvent("UPDATE_BATTLEFIELD_SCORE")
 
     WFC.Arena:Reset()
 
@@ -937,10 +952,20 @@ function WFC.Arena:Enable()
         hud.ticker = CreateFrame("Frame")
         hud.ticker:SetScript("OnUpdate", function()
             this.elapsed = (this.elapsed or 0) + arg1
+            this.scoreReqElapsed = (this.scoreReqElapsed or 0) + arg1
+            
             local interval = WFC.Arena.inPrepPhase and PREP_SCAN_INTERVAL or SCAN_INTERVAL
             if this.elapsed >= interval then
                 this.elapsed = 0
                 if WFC.Arena.enabled then Scan(); WFC.Arena:UpdateHUD() end
+            end
+
+            -- Throttle score requests to discover enemies completely out-of-range (>50y)
+            -- Ask server every 3s during prep, every 10s during match (incase late joiners)
+            local scoreInterval = WFC.Arena.inPrepPhase and 3.0 or 10.0
+            if this.scoreReqElapsed >= scoreInterval then
+                this.scoreReqElapsed = 0
+                if WFC.Arena.enabled then RequestBattlefieldScoreData() end
             end
         end)
     end
