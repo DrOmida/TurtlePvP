@@ -11,8 +11,20 @@ WFC.Arena = { enabled = false }
 -- Runtime detection: pfUI's libcast creates global UnitCastingInfo/UnitChannelInfo.
 -- When available, we get accurate cast data + spell icons + SuperWoW support.
 -- When not available, we fall back to our own CAST_TIMES table + combat log parsing.
-local hasPfCast = (UnitCastingInfo ~= nil and UnitChannelInfo ~= nil)
-
+-- NOTE: pfUI registers these globals AFTER addon load (inside RegisterModule),
+-- so we check lazily on first use rather than at file parse time.
+local hasPfCast = nil  -- nil = not yet checked
+local function CheckPfCast()
+    if hasPfCast == nil then
+        hasPfCast = (UnitCastingInfo ~= nil and UnitChannelInfo ~= nil)
+        if hasPfCast then
+            WFC:Debug("[Arena] pfUI libcast detected — using enhanced cast bars.")
+        else
+            WFC:Debug("[Arena] pfUI libcast not found — using fallback CAST_TIMES table.")
+        end
+    end
+    return hasPfCast
+end
 local MAX_ENEMIES   = 8
 local TRINKET_CD    = 120
 local SCAN_INTERVAL = 0.25
@@ -784,7 +796,7 @@ eventFrame:SetScript("OnEvent", function()
 
         AddEnemy(casterName, "", false)
 
-        if enemies[clean] and not hasPfCast then
+        if enemies[clean] and not CheckPfCast() then
             -- Fallback path: write cast state from our own CAST_TIMES table.
             -- When pfUI is active, UnitCastingInfo handles this automatically.
             if spellName then
@@ -971,7 +983,7 @@ function WFC.Arena:UpdateHUD()
                 row.castText:SetText("")
             end
 
-            if hasPfCast then
+            if CheckPfCast() then
                 -- ── pfUI path: query UnitCastingInfo / UnitChannelInfo ──
                 local castSpell, _, _, castTex, castStart, castEnd = UnitCastingInfo(name)
                 local chanSpell, _, _, chanTex, chanStart, chanEnd = UnitChannelInfo(name)
